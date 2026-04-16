@@ -15,8 +15,8 @@ export const ROSTER: readonly RosterEntry[] = [
   { modelSlug: 'anthropic/claude-haiku-4.5', displayName: 'Claude Haiku 4.5' },
   { modelSlug: 'google/gemini-3-flash',      displayName: 'Gemini 3 Flash' },
   { modelSlug: 'deepseek/deepseek-v3',       displayName: 'DeepSeek V3' },
-  { modelSlug: 'xai/grok-4-mini',            displayName: 'Grok 4 mini' },
-  { modelSlug: 'alibaba/qwen-3-max',         displayName: 'Qwen 3 max' },
+  { modelSlug: 'xai/grok-3-mini',            displayName: 'Grok 3 mini' },
+  { modelSlug: 'alibaba/qwen3-max',          displayName: 'Qwen 3 max' },
 ] as const
 
 if (ROSTER.length !== 6) {

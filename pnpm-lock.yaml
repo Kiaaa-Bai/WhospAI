@@ -66,6 +66,9 @@ importers:
       '@vitest/ui':
         specifier: ^4.1.4
         version: 4.1.4(vitest@4.1.4)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       tailwindcss:
         specifier: ^4
         version: 4.2.2

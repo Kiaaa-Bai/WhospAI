@@ -5,8 +5,8 @@ export type ModelSlug =
   | 'anthropic/claude-haiku-4.5'
   | 'google/gemini-3-flash'
   | 'deepseek/deepseek-v3'
-  | 'xai/grok-4-mini'
-  | 'alibaba/qwen-3-max'
+  | 'xai/grok-3-mini'
+  | 'alibaba/qwen3-max'
 
 export type Role = 'civilian' | 'undercover'
 
