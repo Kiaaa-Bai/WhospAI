@@ -8,6 +8,16 @@ import type { VoteResolution } from './scoring'
 
 const DESCRIBE_TIMEOUT_MS = 20_000
 const VOTE_TIMEOUT_MS = 15_000
+const RATE_LIMIT_BACKOFF_MS = 3_000
+
+function isRateLimitError(err: unknown): boolean {
+  const msg = String(err).toLowerCase()
+  return msg.includes('ratelimit') || msg.includes('rate_limit') || msg.includes('rate limit') || msg.includes('429')
+}
+
+async function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 export async function runDescribe(
   player: Player,
@@ -47,7 +57,8 @@ export async function runDescribe(
 
   try {
     return await attempt()
-  } catch {
+  } catch (firstErr) {
+    if (isRateLimitError(firstErr)) await wait(RATE_LIMIT_BACKOFF_MS)
     try {
       return await attempt()
     } catch (err) {
@@ -96,7 +107,8 @@ export async function runVote(
     if (vote.targetId === null) {
       try { vote = await attempt() } catch { /* keep null */ }
     }
-  } catch {
+  } catch (firstErr) {
+    if (isRateLimitError(firstErr)) await wait(RATE_LIMIT_BACKOFF_MS)
     try {
       vote = await attempt()
     } catch (err) {

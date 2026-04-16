@@ -7,7 +7,7 @@ import { resolveVotes, checkWinCondition } from './scoring'
 import { runDescribe, runVote, runTiebreak } from './phases'
 
 export const MAX_ROUNDS = 6
-const DEFAULT_INTER_CALL_DELAY_MS = 500
+const DEFAULT_INTER_CALL_DELAY_MS = 1000
 
 function delay(ms: number) {
   if (ms <= 0) return
