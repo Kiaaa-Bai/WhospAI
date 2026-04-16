@@ -6,8 +6,8 @@ import { buildSystemPrompt, buildDescribePrompt, buildVotePrompt } from './promp
 import { resolveVotes } from './scoring'
 import type { VoteResolution } from './scoring'
 
-const DESCRIBE_TIMEOUT_MS = 30_000
-const VOTE_TIMEOUT_MS = 20_000
+const DESCRIBE_TIMEOUT_MS = 20_000
+const VOTE_TIMEOUT_MS = 15_000
 
 export async function runDescribe(
   player: Player,
