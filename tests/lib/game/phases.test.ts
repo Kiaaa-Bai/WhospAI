@@ -110,3 +110,46 @@ describe('runVote', () => {
     expect(vote!.targetId).toBeNull()
   })
 })
+
+import { runTiebreak } from '@/lib/game/phases'
+
+describe('runTiebreak', () => {
+  it('re-describes and revotes among tied players, eliminates winner', async () => {
+    const events: GameEvent[] = []
+    const llm = makeLLM({
+      describe: vi.fn(async (req) => {
+        req.onToken('x')
+        return { reasoning: 'r', statement: 'x' }
+      }),
+      vote: vi.fn(async (req) => {
+        // all vote for p2
+        return { reasoning: 'r', targetPlayerId: 'p2' }
+      }),
+    })
+
+    const players = [mkPlayer('p1'), mkPlayer('p2'), mkPlayer('p3'), mkPlayer('p4')]
+    const result = await runTiebreak(['p1', 'p2'], players, 2, e => events.push(e), llm)
+
+    expect(result.kind).toBe('elimination')
+    if (result.kind === 'elimination') expect(result.targetId).toBe('p2')
+  })
+
+  it('returns no-elimination if tiebreak ties again', async () => {
+    const events: GameEvent[] = []
+    const llm = makeLLM({
+      describe: vi.fn(async () => ({ reasoning: 'r', statement: 'x' })),
+      vote: vi.fn(async (req) => {
+        // voters alternate: p1->p2, p2->p1, p3->p1, p4->p2 (ties)
+        const voterMatch = req.system.match(/Player (p\d)/)
+        const voter = voterMatch![1]
+        const mapping: Record<string, string> = { p1: 'p2', p2: 'p1', p3: 'p1', p4: 'p2' }
+        return { reasoning: 'r', targetPlayerId: mapping[voter] }
+      }),
+    })
+
+    const players = [mkPlayer('p1'), mkPlayer('p2'), mkPlayer('p3'), mkPlayer('p4')]
+    const result = await runTiebreak(['p1', 'p2'], players, 2, e => events.push(e), llm)
+
+    expect(result.kind).toBe('no-elimination')
+  })
+})

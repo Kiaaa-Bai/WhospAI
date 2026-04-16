@@ -3,6 +3,8 @@ import type { Emit, Player, PlayerId, Statement, Vote } from './types'
 import type { LLM } from './llm'
 import type { RoundContext } from './prompts'
 import { buildSystemPrompt, buildDescribePrompt, buildVotePrompt } from './prompts'
+import { resolveVotes } from './scoring'
+import type { VoteResolution } from './scoring'
 
 const DESCRIBE_TIMEOUT_MS = 30_000
 const VOTE_TIMEOUT_MS = 20_000
@@ -106,4 +108,54 @@ export async function runVote(
 
   emit({ type: 'vote-cast', vote })
   return vote
+}
+
+/**
+ * Tiebreak: tied players give ONE more statement and ALL alive players revote.
+ * If still tied, returns no-elimination. Otherwise returns the new elimination.
+ */
+export async function runTiebreak(
+  tiedIds: PlayerId[],
+  players: Player[],
+  round: number,
+  emit: Emit,
+  llm: LLM,
+): Promise<VoteResolution | { kind: 'no-elimination' }> {
+  emit({ type: 'phase', phase: 'tiebreak' })
+
+  const alivePlayers = players.filter(p => !p.eliminated)
+  const tiedPlayers = alivePlayers.filter(p => tiedIds.includes(p.id))
+
+  // collect prior round statements for context
+  const ctx: RoundContext = { players, statements: [], round }
+
+  // tied players give one more statement
+  for (const p of tiedPlayers) {
+    const stmt = await runDescribe(p, ctx, emit, llm)
+    if (stmt) ctx.statements.push(stmt)
+  }
+
+  // all alive players revote, but only tied players are valid targets
+  const votes: Vote[] = []
+  for (const voter of alivePlayers) {
+    // restrict targets: mark non-tied non-voter players as eliminated in the vote ctx
+    const restrictedCtx: RoundContext = {
+      ...ctx,
+      players: players.map(p =>
+        tiedIds.includes(p.id) || p.id === voter.id ? p : { ...p, eliminated: true }
+      ),
+    }
+    const vote = await runVote(voter, restrictedCtx, emit, llm)
+    if (vote) votes.push(vote)
+  }
+
+  const resolution = resolveVotes(votes, alivePlayers.filter(p => tiedIds.includes(p.id)))
+
+  if (resolution.kind === 'elimination') {
+    emit({ type: 'elimination', playerId: resolution.targetId, tally: resolution.tally })
+    return resolution
+  }
+
+  emit({ type: 'no-elimination' })
+  return { kind: 'no-elimination' }
 }
