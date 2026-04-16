@@ -3,7 +3,7 @@
 export type ModelSlug =
   | 'openai/gpt-5.4-mini'
   | 'anthropic/claude-haiku-4.5'
-  | 'google/gemini-3-flash'
+  | 'google/gemini-2.5-flash'
   | 'deepseek/deepseek-v3'
   | 'xai/grok-3-mini'
   | 'alibaba/qwen3-max'
