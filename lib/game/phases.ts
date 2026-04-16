@@ -30,6 +30,9 @@ export async function runDescribe(
         accumulated += delta
         emit({ type: 'speak-token', playerId: player.id, delta })
       },
+      onReasoningToken: (delta) => {
+        emit({ type: 'think-token', playerId: player.id, delta })
+      },
       signal: AbortSignal.timeout(DESCRIBE_TIMEOUT_MS),
     })
 

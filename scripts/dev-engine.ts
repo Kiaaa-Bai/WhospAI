@@ -15,6 +15,7 @@ function formatEvent(e: GameEvent): string {
     case 'phase':           return `  [phase: ${e.phase}]`
     case 'speak-start':     return `  ${e.playerId} speaks...`
     case 'speak-token':     { process.stdout.write(e.delta); return '' }
+    case 'think-token':     return ''
     case 'speak-end':       return `\n    (reasoning: ${e.reasoning.slice(0, 100)}...)`
     case 'speak-error':     return `  ${e.playerId} failed: ${e.reason}`
     case 'vote-start':      return `  ${e.playerId} votes...`

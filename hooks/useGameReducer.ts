@@ -59,7 +59,14 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       return { ...state, phase: event.phase }
 
     case 'speak-start':
-      return { ...state, currentSpeaker: event.playerId }
+      return {
+        ...state,
+        currentSpeaker: event.playerId,
+        reasoningByPlayer: {
+          ...state.reasoningByPlayer,
+          [event.playerId]: '',
+        },
+      }
 
     case 'speak-token':
       return {
@@ -79,6 +86,15 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
         reasoningByPlayer: {
           ...state.reasoningByPlayer,
           [event.statement.playerId]: event.reasoning,
+        },
+      }
+
+    case 'think-token':
+      return {
+        ...state,
+        reasoningByPlayer: {
+          ...state.reasoningByPlayer,
+          [event.playerId]: (state.reasoningByPlayer[event.playerId] ?? '') + event.delta,
         },
       }
 

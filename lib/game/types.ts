@@ -65,6 +65,7 @@ export type GameEvent =
   | { type: 'tie';          tiedPlayers: PlayerId[] }
   | { type: 'no-elimination' }
   | { type: 'game-over';    result: GameResult }
+  | { type: 'think-token';  playerId: PlayerId; delta: string }
   | { type: 'error';        message: string }
 
 export type Emit = (event: GameEvent) => void

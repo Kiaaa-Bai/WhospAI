@@ -46,6 +46,14 @@ describe('reduceGameEvent', () => {
     expect(s3.players.find(p => p.id === 'p2')!.eliminated).toBe(true)
   })
 
+  it('think-token accumulates into reasoningByPlayer', () => {
+    const s1 = reduceGameEvent(initialGameState, { type: 'game-start', players: [mkPlayer('p1')] })
+    const s2 = reduceGameEvent(s1, { type: 'speak-start', playerId: 'p1' })
+    const s3 = reduceGameEvent(s2, { type: 'think-token', playerId: 'p1', delta: 'I think ' })
+    const s4 = reduceGameEvent(s3, { type: 'think-token', playerId: 'p1', delta: 'p3 is sus' })
+    expect(s4.reasoningByPlayer['p1']).toBe('I think p3 is sus')
+  })
+
   it('game-over sets result', () => {
     const s = reduceGameEvent(initialGameState, {
       type: 'game-over',

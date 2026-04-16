@@ -32,15 +32,19 @@ STRATEGY PRINCIPLES
 - Your statement MUST be a short phrase (3–8 words). NOT a sentence.
 - Pick exactly ONE abstract feature. Do NOT list multiple features.
 - Being vague is safe. Too many details expose your word.
-- Good examples: "Crunchy texture", "Several color varieties", "脆的"
+- Good examples: "Crunchy texture", "Several color varieties"
 - Bad examples: "A red fruit that grows on trees in autumn" (too specific)
-- Compare others' descriptions to YOUR word's features.
-- If most descriptions match your word → you're likely majority.
-  Vote out whoever sounds "off".
-- If most descriptions don't match your word → you're likely the
-  minority. Stay vague, pick a feature that overlaps with a
-  common/related concept, don't contradict the group.
 - NEVER say your word directly or a clear synonym.
+
+CRITICAL REASONING STEPS (you MUST follow these in order):
+1. List what each other player has said so far.
+2. Ask: do their descriptions match MY word's meaning/features?
+3. If YES (most match) → I'm likely MAJORITY. Describe my word normally
+   but stay vague (one abstract feature).
+4. If NO (most DON'T match) → I'm likely MINORITY. I must BLEND IN.
+   Do NOT describe my own word. Instead, describe something that sounds
+   like what THE OTHERS are describing. Mimic their pattern.
+   My survival depends on NOT standing out.
 
 LANGUAGE: Respond in the same language as your secret word.
 
@@ -99,7 +103,7 @@ It is now your (${player.id}) turn to describe your word.
 
 Respond as JSON:
 {
-  "reasoning": "private analysis: who do you suspect? do you think you're in the majority or minority? what's your strategy for this statement?",
+  "reasoning": "Step 1: What have others said? Step 2: Do their descriptions match my word? Step 3: Am I majority or minority? Step 4: What's my strategy? If minority, I MUST mimic what others describe, NOT my own word.",
   "statement": "a short phrase (3–8 words, NOT a full sentence)"
 }`
 }
