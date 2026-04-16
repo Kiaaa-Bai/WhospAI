@@ -29,7 +29,7 @@ describe('runGame', () => {
       { civilianWord: 'apple', undercoverWord: 'pear' },
       emit,
       llm,
-      () => 0.5, // deterministic rng
+      { rng: () => 0.5, interCallDelayMs: 0 },
     )
 
     expect(result.winner).toMatch(/civilians|undercover/)
@@ -56,7 +56,8 @@ describe('runGame', () => {
 
     const events: GameEvent[] = []
     await runGame(
-      { civilianWord: 'a', undercoverWord: 'b' }, e => events.push(e), llm, () => 0.5,
+      { civilianWord: 'a', undercoverWord: 'b' }, e => events.push(e), llm,
+      { rng: () => 0.5, interCallDelayMs: 0 },
     )
 
     const roundOrders = events.filter(e => e.type === 'round-order')

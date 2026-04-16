@@ -7,13 +7,29 @@ import { resolveVotes, checkWinCondition } from './scoring'
 import { runDescribe, runVote, runTiebreak } from './phases'
 
 export const MAX_ROUNDS = 6
+const DEFAULT_INTER_CALL_DELAY_MS = 1500
+
+function delay(ms: number) {
+  if (ms <= 0) return
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export interface RunGameOptions {
+  rng?: () => number
+  interCallDelayMs?: number
+}
 
 export async function runGame(
   config: GameConfig,
   emit: Emit,
   llm: LLM,
-  rng: () => number = Math.random,
+  optsOrRng?: RunGameOptions | (() => number),
 ): Promise<GameResult> {
+  const opts: RunGameOptions = typeof optsOrRng === 'function'
+    ? { rng: optsOrRng }
+    : optsOrRng ?? {}
+  const rng = opts.rng ?? Math.random
+  const interCallDelayMs = opts.interCallDelayMs ?? DEFAULT_INTER_CALL_DELAY_MS
   const players = assignRoles(config, rng)
   emit({ type: 'game-start', players })
 
@@ -32,15 +48,17 @@ export async function runGame(
 
     emit({ type: 'phase', phase: 'describe' })
     const statements: Statement[] = []
-    for (const p of orderedAlive) {
-      const stmt = await runDescribe(p, { players, statements, round }, emit, llm)
+    for (let i = 0; i < orderedAlive.length; i++) {
+      if (i > 0) await delay(interCallDelayMs)
+      const stmt = await runDescribe(orderedAlive[i], { players, statements, round }, emit, llm)
       if (stmt) statements.push(stmt)
     }
 
     emit({ type: 'phase', phase: 'vote' })
     const votes: Vote[] = []
-    for (const p of alive) {
-      const vote = await runVote(p, { players, statements, round }, emit, llm)
+    for (let i = 0; i < alive.length; i++) {
+      if (i > 0) await delay(interCallDelayMs)
+      const vote = await runVote(alive[i], { players, statements, round }, emit, llm)
       if (vote) votes.push(vote)
     }
 

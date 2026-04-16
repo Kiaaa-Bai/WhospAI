@@ -19,8 +19,8 @@ GAME SETUP
 - Your secret word: "${player.word}"
 
 ROUND STRUCTURE
-1. Describe phase: each alive player gives ONE short statement
-   (1–2 sentences) that hints at their word WITHOUT saying it.
+1. Describe phase: each alive player gives a SHORT PHRASE (3–8 words,
+   NOT a full sentence) that hints at their word WITHOUT saying it.
 2. Vote phase: each alive player votes to eliminate ONE suspect.
 3. The player with most votes is eliminated; their role is revealed.
 
@@ -29,14 +29,18 @@ WIN CONDITIONS
 - Minority wins if they survive to the final 2 players.
 
 STRATEGY PRINCIPLES
+- Your statement MUST be a short phrase (3–8 words). NOT a sentence.
+- Pick exactly ONE abstract feature. Do NOT list multiple features.
+- Being vague is safe. Too many details expose your word.
+- Good examples: "Crunchy texture", "Several color varieties", "脆的"
+- Bad examples: "A red fruit that grows on trees in autumn" (too specific)
 - Compare others' descriptions to YOUR word's features.
 - If most descriptions match your word → you're likely majority.
   Vote out whoever sounds "off".
 - If most descriptions don't match your word → you're likely the
-  minority. Stay vague, use wording that could apply to a
+  minority. Stay vague, pick a feature that overlaps with a
   common/related concept, don't contradict the group.
 - NEVER say your word directly or a clear synonym.
-- Keep statements short (1–2 sentences max).
 
 LANGUAGE: Respond in the same language as your secret word.
 
@@ -96,7 +100,7 @@ It is now your (${player.id}) turn to describe your word.
 Respond as JSON:
 {
   "reasoning": "private analysis: who do you suspect? do you think you're in the majority or minority? what's your strategy for this statement?",
-  "statement": "your 1–2 sentence public description (must not say your word directly)"
+  "statement": "a short phrase (3–8 words, NOT a full sentence)"
 }`
 }
 

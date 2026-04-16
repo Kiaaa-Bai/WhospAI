@@ -3,7 +3,7 @@ import { ALL_PLAYER_IDS } from './types'
 
 export const DescribeSchema = z.object({
   reasoning: z.string().min(1).max(2000),
-  statement: z.string().min(1).max(500),
+  statement: z.string().min(1).max(50),
 })
 
 export const VoteSchema = z.object({
