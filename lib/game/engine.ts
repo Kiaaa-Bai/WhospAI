@@ -33,6 +33,7 @@ export async function runGame(
   const players = assignRoles(config, rng)
   emit({ type: 'game-start', players })
 
+  const allStatements: Statement[] = []
   let round = 0
   while (round < MAX_ROUNDS) {
     round++
@@ -47,18 +48,17 @@ export async function runGame(
     emit({ type: 'round-order', round, order: orderedAlive.map(p => p.id) })
 
     emit({ type: 'phase', phase: 'describe' })
-    const statements: Statement[] = []
     for (let i = 0; i < orderedAlive.length; i++) {
       if (i > 0) await delay(interCallDelayMs)
-      const stmt = await runDescribe(orderedAlive[i], { players, statements, round }, emit, llm)
-      if (stmt) statements.push(stmt)
+      const stmt = await runDescribe(orderedAlive[i], { players, statements: allStatements, round }, emit, llm)
+      if (stmt) allStatements.push(stmt)
     }
 
     emit({ type: 'phase', phase: 'vote' })
     const votes: Vote[] = []
     for (let i = 0; i < alive.length; i++) {
       if (i > 0) await delay(interCallDelayMs)
-      const vote = await runVote(alive[i], { players, statements, round }, emit, llm)
+      const vote = await runVote(alive[i], { players, statements: allStatements, round }, emit, llm)
       if (vote) votes.push(vote)
     }
 

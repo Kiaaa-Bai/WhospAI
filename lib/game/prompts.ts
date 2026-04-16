@@ -33,10 +33,11 @@ STRICT RULES
 - NEVER use ANY character or word found in your secret word.
   Example: if your word is "围棋", you CANNOT say "棋" or "围".
   Example: if your word is "guitar", you CANNOT say "guitar".
-- Your statement MUST be unique. Do NOT repeat, rephrase, or say
-  anything similar to what ANY previous player has already said.
+- Your statement MUST be unique across the ENTIRE GAME (all rounds).
+  Do NOT repeat, rephrase, or say anything similar to what ANY player
+  has said in ANY round — including yourself in previous rounds.
   If someone said "a strategy game", you CANNOT say "requires strategy".
-  Find a COMPLETELY DIFFERENT angle or feature.
+  Find a COMPLETELY DIFFERENT angle or feature each time you speak.
 - Pick exactly ONE abstract feature. Do NOT list multiple features.
 - Being vague is safe. Too many details expose your word.
 

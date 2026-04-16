@@ -1,8 +1,12 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { WordBadge } from './WordBadge'
 import { SpeechBubble } from './SpeechBubble'
 import type { Player } from '@/lib/game/types'
+
+const DESCRIBE_TIMEOUT = 20
+const VOTE_TIMEOUT = 15
 
 interface Props {
   player: Player
@@ -12,8 +16,25 @@ interface Props {
   votedFor?: string | null
 }
 
+function Countdown({ seconds }: { seconds: number }) {
+  const [remaining, setRemaining] = useState(seconds)
+
+  useEffect(() => {
+    setRemaining(seconds)
+    const timer = setInterval(() => {
+      setRemaining(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [seconds])
+
+  const color = remaining <= 5 ? 'text-red-400' : 'text-zinc-400'
+
+  return <span className={`ml-1 font-mono ${color}`}>{remaining}s</span>
+}
+
 export function PlayerCard({ player, currentSpeech, isSpeaking, isVoting, votedFor }: Props) {
   const eliminated = player.eliminated
+  const active = isSpeaking || isVoting
 
   return (
     <motion.div
@@ -24,18 +45,19 @@ export function PlayerCard({ player, currentSpeech, isSpeaking, isVoting, votedF
         relative w-44 shrink-0 p-3 rounded-2xl border
         ${eliminated
           ? 'bg-zinc-900/40 border-zinc-800 opacity-50'
-          : isSpeaking || isVoting
+          : active
             ? 'bg-zinc-900 border-amber-500/70 shadow-[0_0_24px_rgba(245,158,11,0.25)]'
             : 'bg-zinc-900 border-zinc-800'}
       `}
     >
-      {(isSpeaking || isVoting) && (
+      {active && (
         <motion.div
-          className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded-full bg-amber-500 text-zinc-950 font-medium"
+          className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded-full bg-amber-500 text-zinc-950 font-medium flex items-center"
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
         >
           {isSpeaking ? 'speaking' : 'voting'}
+          <Countdown seconds={isSpeaking ? DESCRIBE_TIMEOUT : VOTE_TIMEOUT} />
         </motion.div>
       )}
 
