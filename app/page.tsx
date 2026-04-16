@@ -1,65 +1,71 @@
-import Image from "next/image";
+// app/page.tsx
+'use client'
+import { useState } from 'react'
+import { useGameSSE } from '@/hooks/useGameSSE'
+import { useGameReducer } from '@/hooks/useGameReducer'
 
 export default function Home() {
+  const [state, dispatch] = useGameReducer()
+  const { start, status, error } = useGameSSE(e => dispatch(e))
+
+  const [civilianWord, setCivilianWord] = useState('apple')
+  const [undercoverWord, setUndercoverWord] = useState('pear')
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="p-8 font-mono text-sm max-w-4xl mx-auto">
+      <h1 className="text-2xl mb-4">Whospy (dev)</h1>
+
+      {state.phase === 'setup' && status !== 'streaming' && (
+        <div className="space-y-2">
+          <div>
+            <label className="block">Civilian word</label>
+            <input className="border px-2 py-1" value={civilianWord} onChange={e => setCivilianWord(e.target.value)} />
+          </div>
+          <div>
+            <label className="block">Undercover word</label>
+            <input className="border px-2 py-1" value={undercoverWord} onChange={e => setUndercoverWord(e.target.value)} />
+          </div>
+          <button
+            className="bg-blue-600 text-white px-3 py-1"
+            onClick={() => start({ civilianWord, undercoverWord })}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Start
+          </button>
         </div>
-      </main>
-    </div>
-  );
+      )}
+
+      {status === 'streaming' && <p>Streaming…</p>}
+      {error && <pre className="text-red-600">{error}</pre>}
+
+      {state.players.length > 0 && (
+        <section className="mt-6">
+          <h2 className="font-bold">Players</h2>
+          <ul>
+            {state.players.map(p => (
+              <li key={p.id} className={p.eliminated ? 'line-through opacity-50' : ''}>
+                {p.id} · {p.displayName} · {p.role} · word="{p.word}"
+                {state.currentSpeech[p.id] && <>: "{state.currentSpeech[p.id]}"</>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="mt-6">
+        <h2 className="font-bold">Round {state.round} · Phase: {state.phase}</h2>
+      </section>
+
+      {state.result && (
+        <section className="mt-6 p-4 bg-green-100">
+          <h2 className="font-bold">Game Over</h2>
+          <p>Winner: {state.result.winner} · Rounds: {state.result.rounds}</p>
+        </section>
+      )}
+
+      <details className="mt-6">
+        <summary>Raw history ({state.history.length} eliminations)</summary>
+        <pre className="text-xs">{JSON.stringify(state.history, null, 2)}</pre>
+      </details>
+    </main>
+  )
 }
