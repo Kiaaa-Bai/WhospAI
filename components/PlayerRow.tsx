@@ -21,15 +21,20 @@ export function PlayerRow({ state }: { state: GameState }) {
         layout
         className="flex flex-wrap justify-center gap-4 py-8"
       >
-        {all.map(p => (
-          <PlayerCard
-            key={p.id}
-            player={p}
-            currentSpeech={state.currentSpeech[p.id]}
-            isSpeaking={state.currentSpeaker === p.id && (state.phase === 'describe' || state.phase === 'tiebreak')}
-            isVoting={state.currentSpeaker === p.id && state.phase === 'vote'}
-          />
-        ))}
+        {all.map(p => {
+          const showVote = (state.phase === 'vote' || state.phase === 'tiebreak' || state.phase === 'over')
+            && p.id in state.currentRoundVotes
+          return (
+            <PlayerCard
+              key={p.id}
+              player={p}
+              currentSpeech={state.currentSpeech[p.id]}
+              isSpeaking={state.currentSpeaker === p.id && (state.phase === 'describe' || state.phase === 'tiebreak')}
+              isVoting={state.currentSpeaker === p.id && state.phase === 'vote'}
+              votedFor={showVote ? state.currentRoundVotes[p.id] : undefined}
+            />
+          )
+        })}
       </motion.div>
     </LayoutGroup>
   )

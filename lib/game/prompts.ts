@@ -28,13 +28,17 @@ WIN CONDITIONS
 - Majority group wins if the minority is eliminated.
 - Minority wins if they survive to the final 2 players.
 
-STRATEGY PRINCIPLES
+STRICT RULES
 - Your statement MUST be a short phrase (3–8 words). NOT a sentence.
+- NEVER use ANY character or word found in your secret word.
+  Example: if your word is "围棋", you CANNOT say "棋" or "围".
+  Example: if your word is "guitar", you CANNOT say "guitar".
+- Your statement MUST be unique. Do NOT repeat, rephrase, or say
+  anything similar to what ANY previous player has already said.
+  If someone said "a strategy game", you CANNOT say "requires strategy".
+  Find a COMPLETELY DIFFERENT angle or feature.
 - Pick exactly ONE abstract feature. Do NOT list multiple features.
 - Being vague is safe. Too many details expose your word.
-- Good examples: "Crunchy texture", "Several color varieties"
-- Bad examples: "A red fruit that grows on trees in autumn" (too specific)
-- NEVER say your word directly or a clear synonym.
 
 CRITICAL REASONING STEPS (you MUST follow these in order):
 1. List what each other player has said so far.
@@ -45,6 +49,10 @@ CRITICAL REASONING STEPS (you MUST follow these in order):
    Do NOT describe my own word. Instead, describe something that sounds
    like what THE OTHERS are describing. Mimic their pattern.
    My survival depends on NOT standing out.
+5. Check: does my planned statement contain any character from my word?
+   If YES, rewrite it. This is an automatic disqualification.
+6. Check: is my statement too similar to a previous statement?
+   If YES, find a different angle.
 
 LANGUAGE: Respond in the same language as your secret word.
 

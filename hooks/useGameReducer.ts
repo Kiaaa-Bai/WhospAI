@@ -16,6 +16,7 @@ export interface GameState {
   currentStatements: Statement[]
   votes: Vote[]
   reasoningByPlayer: Record<string, string>
+  currentRoundVotes: Record<string, string | null>
   lastEliminationTally: Record<string, number> | null
   history: Array<{ round: number; eliminatedId: PlayerId | null; role?: Player['role'] }>
   result: GameResult | null
@@ -32,6 +33,7 @@ export const initialGameState: GameState = {
   statements: [],
   currentStatements: [],
   votes: [],
+  currentRoundVotes: {},
   reasoningByPlayer: {},
   lastEliminationTally: null,
   history: [],
@@ -50,6 +52,7 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
         round: event.round,
         currentSpeech: {},
         currentStatements: [],
+        currentRoundVotes: {},
       }
 
     case 'round-order':
@@ -109,6 +112,10 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
         ...state,
         currentSpeaker: null,
         votes: [...state.votes, event.vote],
+        currentRoundVotes: {
+          ...state.currentRoundVotes,
+          [event.vote.voterId]: event.vote.targetId,
+        },
         reasoningByPlayer: {
           ...state.reasoningByPlayer,
           [event.vote.voterId]: event.vote.reasoning,

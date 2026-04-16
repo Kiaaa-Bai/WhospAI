@@ -9,9 +9,10 @@ interface Props {
   currentSpeech?: string
   isSpeaking: boolean
   isVoting: boolean
+  votedFor?: string | null
 }
 
-export function PlayerCard({ player, currentSpeech, isSpeaking, isVoting }: Props) {
+export function PlayerCard({ player, currentSpeech, isSpeaking, isVoting, votedFor }: Props) {
   const eliminated = player.eliminated
 
   return (
@@ -50,6 +51,16 @@ export function PlayerCard({ player, currentSpeech, isSpeaking, isVoting }: Prop
       </div>
 
       <SpeechBubble text={currentSpeech ?? ''} active={isSpeaking} />
+
+      {votedFor !== undefined && (
+        <div className="mt-2 text-xs font-mono">
+          {votedFor ? (
+            <span className="text-amber-400">voted → {votedFor}</span>
+          ) : (
+            <span className="text-zinc-600">abstained</span>
+          )}
+        </div>
+      )}
 
       {eliminated && player.eliminatedRound && (
         <div className="mt-2 text-xs text-zinc-500">Eliminated in R{player.eliminatedRound}</div>

@@ -150,10 +150,11 @@ export async function runTiebreak(
     if (stmt) ctx.statements.push(stmt)
   }
 
-  // all alive players revote, but only tied players are valid targets
+  // only NON-TIED alive players vote; tied players cannot vote
+  const voters = alivePlayers.filter(p => !tiedIds.includes(p.id))
   const votes: Vote[] = []
-  for (const voter of alivePlayers) {
-    // restrict targets: mark non-tied non-voter players as eliminated in the vote ctx
+  for (const voter of voters) {
+    // restrict valid targets to only tied players
     const restrictedCtx: RoundContext = {
       ...ctx,
       players: players.map(p =>
