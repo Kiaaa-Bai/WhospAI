@@ -1,36 +1,8 @@
 // scripts/dev-engine.ts
+import 'dotenv/config'
 import { runGame } from '@/lib/game/engine'
-import { createMockLLM, mockKey } from '@/lib/game/mock-llm'
+import { createRealLLM } from '@/lib/game/llm'
 import type { GameEvent } from '@/lib/game/types'
-
-function buildScript() {
-  const describes: Record<string, { reasoning: string; statement: string }> = {}
-  const votes: Record<string, { reasoning: string; targetPlayerId: string }> = {}
-
-  const statements: Record<string, string> = {
-    p1: 'Often red in color.',
-    p2: 'Crunchy when bitten.',
-    p3: 'Typically green or yellow.',
-    p4: 'Newton had one fall on him.',
-    p5: 'A tech company uses it as logo.',
-    p6: 'Ripens in autumn.',
-  }
-
-  for (const id of ['p1','p2','p3','p4','p5','p6']) {
-    for (let r = 1; r <= 6; r++) {
-      describes[mockKey(id as any, r)] = {
-        reasoning: `I suspect p3 because their description (green/yellow) doesn't match mine.`,
-        statement: statements[id],
-      }
-      votes[mockKey(id as any, r)] = {
-        reasoning: `p3 says green/yellow, I say red. Suspicious.`,
-        targetPlayerId: id === 'p3' ? 'p1' : 'p3',
-      }
-    }
-  }
-
-  return { describes, votes }
-}
 
 function formatEvent(e: GameEvent): string {
   switch (e.type) {
@@ -42,11 +14,11 @@ function formatEvent(e: GameEvent): string {
     case 'round-order':     return `  Speaking order: ${e.order.join(' -> ')}`
     case 'phase':           return `  [phase: ${e.phase}]`
     case 'speak-start':     return `  ${e.playerId} speaks...`
-    case 'speak-token':     return ''
-    case 'speak-end':       return `    "${e.statement.text}"\n    (reasoning: ${e.reasoning.slice(0, 80)}...)`
+    case 'speak-token':     { process.stdout.write(e.delta); return '' }
+    case 'speak-end':       return `\n    (reasoning: ${e.reasoning.slice(0, 100)}...)`
     case 'speak-error':     return `  ${e.playerId} failed: ${e.reason}`
     case 'vote-start':      return `  ${e.playerId} votes...`
-    case 'vote-cast':       return `    ${e.vote.voterId} -> ${e.vote.targetId ?? 'ABSTAIN'} (${e.vote.reasoning.slice(0, 60)}...)`
+    case 'vote-cast':       return `    ${e.vote.voterId} -> ${e.vote.targetId ?? 'ABSTAIN'} (${e.vote.reasoning.slice(0, 80)}...)`
     case 'elimination':     return `  >>> ELIMINATED: ${e.playerId}`
     case 'tie':             return `  TIE: ${e.tiedPlayers.join(', ')}`
     case 'no-elimination':  return `  (no elimination this round)`
@@ -57,7 +29,7 @@ function formatEvent(e: GameEvent): string {
 }
 
 async function main() {
-  const llm = createMockLLM(buildScript())
+  const llm = createRealLLM()
   await runGame(
     { civilianWord: 'apple', undercoverWord: 'pear' },
     (e) => {
