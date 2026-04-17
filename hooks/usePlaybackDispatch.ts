@@ -13,6 +13,15 @@ const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s
 const PAUSE_BETWEEN_MS = 500
 const POST_TURN_LINGER_MS = 3000    // linger on speaker after they finish
 const ERROR_FLASH_MS = 150
+const OVERLAY_PAUSE_MS = 2000       // time to display PhaseOverlay before resuming
+
+const OVERLAY_TRIGGERS = new Set([
+  'game-start',
+  'round-start',
+  'phase',
+  'elimination',
+  'no-elimination',
+])
 
 interface TurnItem {
   kind: 'turn'
@@ -116,6 +125,11 @@ export function usePlaybackDispatch(
         if (item.kind === 'pass') {
           queueRef.current.shift()
           dispatch(item.event)
+          // Pause so the PhaseOverlay has time to play for milestone events.
+          if (OVERLAY_TRIGGERS.has(item.event.type)) {
+            await sleep(OVERLAY_PAUSE_MS)
+            if (abortedRef.current) return
+          }
           continue
         }
 

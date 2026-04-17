@@ -3,11 +3,13 @@ import { useEffect } from 'react'
 import { XCircle, Users, Skull, FilmSlate, SpeakerHigh, SpeakerSlash } from '@phosphor-icons/react'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useGameReducer } from '@/hooks/useGameReducer'
+import { useOverlayTrigger } from '@/hooks/useOverlayTrigger'
 import { usePlaybackDispatch } from '@/hooks/usePlaybackDispatch'
 import { useSpeech } from '@/hooks/useSpeech'
 import { MainStage } from './MainStage'
 import { PanelSeats } from './PanelSeats'
 import { InfoBox } from './InfoBox'
+import { PhaseOverlay } from './PhaseOverlay'
 import { GameOverOverlay } from './GameOverOverlay'
 import type { GameConfig } from '@/lib/game/types'
 
@@ -22,6 +24,7 @@ export function GameViewer({
   const speech = useSpeech()
   const playbackDispatch = usePlaybackDispatch(dispatch, speech.speak)
   const { start, status, error } = useGameSSE(playbackDispatch)
+  const overlay = useOverlayTrigger(state)
 
   useEffect(() => {
     start(config)
@@ -117,6 +120,8 @@ export function GameViewer({
           </div>
         </div>
       )}
+
+      <PhaseOverlay item={overlay} />
 
       {state.result && <GameOverOverlay result={state.result} onPlayAgain={onExit} />}
     </div>
