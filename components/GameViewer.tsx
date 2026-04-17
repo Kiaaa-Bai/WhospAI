@@ -1,9 +1,10 @@
 'use client'
 import { useEffect } from 'react'
-import { XCircle, Users, Skull, FilmSlate } from '@phosphor-icons/react'
+import { XCircle, Users, Skull, FilmSlate, SpeakerHigh, SpeakerSlash } from '@phosphor-icons/react'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useGameReducer } from '@/hooks/useGameReducer'
 import { usePlaybackDispatch } from '@/hooks/usePlaybackDispatch'
+import { useSpeech } from '@/hooks/useSpeech'
 import { MainStage } from './MainStage'
 import { PanelSeats } from './PanelSeats'
 import { InfoBox } from './InfoBox'
@@ -18,7 +19,8 @@ export function GameViewer({
   onExit: () => void
 }) {
   const [state, dispatch] = useGameReducer()
-  const playbackDispatch = usePlaybackDispatch(dispatch)
+  const speech = useSpeech()
+  const playbackDispatch = usePlaybackDispatch(dispatch, speech.speak)
   const { start, status, error } = useGameSSE(playbackDispatch)
 
   useEffect(() => {
@@ -49,13 +51,31 @@ export function GameViewer({
             </>
           )}
         </div>
-        <button
-          onClick={onExit}
-          aria-label="Exit"
-          className="text-zinc-500 hover:text-zinc-300 transition-colors"
-        >
-          <XCircle weight="fill" size={22} />
-        </button>
+        <div className="flex items-center gap-3">
+          {speech.supported && (
+            <button
+              onClick={() => speech.setEnabled(!speech.enabled)}
+              aria-label={speech.enabled ? 'Mute voice' : 'Enable voice'}
+              title={speech.enabled ? 'Mute voice' : 'Enable voice'}
+              className={`transition-colors ${
+                speech.enabled
+                  ? 'text-amber-300 hover:text-amber-200'
+                  : 'text-zinc-600 hover:text-zinc-400'
+              }`}
+            >
+              {speech.enabled
+                ? <SpeakerHigh weight="fill" size={22} />
+                : <SpeakerSlash weight="fill" size={22} />}
+            </button>
+          )}
+          <button
+            onClick={onExit}
+            aria-label="Exit"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            <XCircle weight="fill" size={22} />
+          </button>
+        </div>
       </header>
 
       {error && (

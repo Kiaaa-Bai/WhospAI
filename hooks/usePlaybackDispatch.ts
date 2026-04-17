@@ -1,13 +1,13 @@
 'use client'
 import { useCallback, useEffect, useRef } from 'react'
-import type { GameEvent, PlayerId } from '@/lib/game/types'
+import type { GameEvent, ModelSlug, PlayerId } from '@/lib/game/types'
 
 /**
  * Animation pacing for "human-like" playback.
  * Server events are buffered per-turn and replayed at these speeds,
  * decoupling the user-visible pace from the LLM generation pace.
  */
-const REASONING_MS_PER_CHAR = 40    // 25 chars/s (unified with statement)
+const REASONING_MS_PER_CHAR = 40    // 25 chars/s
 const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s
 const PAUSE_BETWEEN_MS = 500
 const POST_TURN_LINGER_MS = 3000    // linger on speaker after they finish
@@ -30,27 +30,34 @@ interface PassItem {
 
 type QueueItem = TurnItem | PassItem
 
+type SpeakFn = (text: string, modelSlug: ModelSlug) => Promise<void>
+
 /**
  * Wraps a dispatch function so that speak/vote events play at a steady,
  * human-readable pace (typewriter), independent of server generation speed.
  *
  * - Non-turn events (round-start, phase, elimination, game-over…) pass through
  *   in order, but only after any preceding turn's animation has completed.
- * - Turn events (speak-start → think-tokens → speak-tokens → speak-end) are
- *   buffered. Once the turn completes on the server, the client animates it:
- *     1. reasoning tokens at REASONING_MS_PER_CHAR
- *     2. pause PAUSE_BETWEEN_MS
- *     3. (describe only) statement tokens at STATEMENT_MS_PER_CHAR
- *     4. dispatch the final speak-end/vote-cast
- * - If multiple turns complete on the server while the first animates,
- *   they queue and play in order.
+ * - Turn events are buffered; once a turn completes on the server, the client
+ *   animates it: reasoning → 500ms pause → statement → 3s linger → end event.
+ * - If a `speak` callback is provided, summary and statement text are played
+ *   aloud via TTS IN PARALLEL with the typewriter. Each phase waits for BOTH
+ *   the typewriter and the TTS to finish before proceeding.
+ * - game-start events are intercepted to cache the playerId→modelSlug mapping
+ *   so TTS can pick the right voice without a separate lookup path.
  */
 export function usePlaybackDispatch(
   dispatch: (e: GameEvent) => void,
+  speak?: SpeakFn,
 ): (e: GameEvent) => void {
   const queueRef = useRef<QueueItem[]>([])
   const runningRef = useRef(false)
   const abortedRef = useRef(false)
+  const slugsRef = useRef<Map<PlayerId, ModelSlug>>(new Map())
+  // Keep `speak` in a ref so the stable `drain` closure always calls the
+  // latest callback (which captures the latest enabled/voices state).
+  const speakRef = useRef<SpeakFn | undefined>(speak)
+  useEffect(() => { speakRef.current = speak }, [speak])
 
   useEffect(() => {
     abortedRef.current = false
@@ -61,6 +68,32 @@ export function usePlaybackDispatch(
 
   const sleep = (ms: number) =>
     new Promise<void>(resolve => setTimeout(resolve, ms))
+
+  const animateChars = useCallback(
+    async (
+      text: string,
+      playerId: PlayerId,
+      eventType: 'think-token' | 'speak-token',
+      msPerChar: number,
+    ) => {
+      for (let i = 0; i < text.length; i++) {
+        if (abortedRef.current) return
+        dispatch({ type: eventType, playerId, delta: text[i] })
+        await sleep(msPerChar)
+      }
+    },
+    [dispatch],
+  )
+
+  const speakText = useCallback(
+    (text: string, playerId: PlayerId): Promise<void> => {
+      const fn = speakRef.current
+      const slug = slugsRef.current.get(playerId)
+      if (!fn || !slug || !text) return Promise.resolve()
+      return fn(text, slug)
+    },
+    [],
+  )
 
   const drain = useCallback(async () => {
     if (runningRef.current) return
@@ -89,37 +122,27 @@ export function usePlaybackDispatch(
           continue
         }
 
-        // Normal path: start → reasoning → pause → statement → end.
+        // Normal path: start → (reasoning + voice) → pause → (statement + voice)
+        //   → linger → end.
         dispatch(item.startEvent)
 
-        for (let i = 0; i < item.think.length; i++) {
-          if (abortedRef.current) return
-          dispatch({
-            type: 'think-token',
-            playerId: item.playerId,
-            delta: item.think[i],
-          })
-          await sleep(REASONING_MS_PER_CHAR)
-        }
+        await Promise.all([
+          animateChars(item.think, item.playerId, 'think-token', REASONING_MS_PER_CHAR),
+          speakText(item.think, item.playerId),
+        ])
+        if (abortedRef.current) return
 
         await sleep(PAUSE_BETWEEN_MS)
         if (abortedRef.current) return
 
         if (item.phase === 'describe') {
-          for (let i = 0; i < item.speak.length; i++) {
-            if (abortedRef.current) return
-            dispatch({
-              type: 'speak-token',
-              playerId: item.playerId,
-              delta: item.speak[i],
-            })
-            await sleep(STATEMENT_MS_PER_CHAR)
-          }
+          await Promise.all([
+            animateChars(item.speak, item.playerId, 'speak-token', STATEMENT_MS_PER_CHAR),
+            speakText(item.speak, item.playerId),
+          ])
+          if (abortedRef.current) return
         }
 
-        // Linger on the speaker so viewers can read the full output before
-        // the focus jumps to the next model. Keep currentSpeaker set during
-        // this pause by delaying the speak-end / vote-cast dispatch.
         await sleep(POST_TURN_LINGER_MS)
         if (abortedRef.current) return
 
@@ -129,7 +152,7 @@ export function usePlaybackDispatch(
     } finally {
       runningRef.current = false
     }
-  }, [dispatch])
+  }, [dispatch, animateChars, speakText])
 
   return useCallback(
     (e: GameEvent) => {
@@ -143,6 +166,12 @@ export function usePlaybackDispatch(
       }
 
       switch (e.type) {
+        case 'game-start': {
+          // Cache model slugs so TTS can resolve voices by playerId.
+          slugsRef.current = new Map(e.players.map(p => [p.id, p.modelSlug]))
+          queue.push({ kind: 'pass', event: e })
+          break
+        }
         case 'speak-start':
           queue.push({
             kind: 'turn',
