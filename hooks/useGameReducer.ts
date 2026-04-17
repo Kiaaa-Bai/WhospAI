@@ -81,9 +81,11 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       }
 
     case 'speak-end':
+      // NOTE: currentSpeaker is intentionally NOT cleared here so the
+      // speaker stays in focus during the post-turn linger. It's cleared
+      // on the next speak-start / vote-start / game-over.
       return {
         ...state,
-        currentSpeaker: null,
         statements: [...state.statements, event.statement],
         currentStatements: [...state.currentStatements, event.statement],
         reasoningByPlayer: {
@@ -102,7 +104,8 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       }
 
     case 'speak-error':
-      return { ...state, currentSpeaker: null }
+      // leave currentSpeaker alone; it'll roll over to the next speaker
+      return state
 
     case 'vote-start':
       return {
@@ -115,9 +118,10 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       }
 
     case 'vote-cast':
+      // currentSpeaker stays until the next speak/vote-start so the focus
+      // lingers on the voter (with the target avatar visible above head).
       return {
         ...state,
-        currentSpeaker: null,
         votes: [...state.votes, event.vote],
         currentRoundVotes: {
           ...state.currentRoundVotes,
@@ -158,7 +162,7 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       }
 
     case 'game-over':
-      return { ...state, phase: 'over', result: event.result }
+      return { ...state, phase: 'over', currentSpeaker: null, result: event.result }
 
     case 'error':
       return { ...state, error: event.message }

@@ -44,13 +44,22 @@ export function MainStage({ state }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-4 h-full min-h-0">
-      {/* Bubble above head — fixed height so card below doesn't jump */}
+      {/* Bubble above head — fixed height so card below doesn't jump.
+          Describe phase: stream of statement tokens.
+          Vote/tiebreak phase: target avatar once the vote has been cast
+          (kept empty while the voter is still reasoning — never shows
+          leftover describe-phase statement). */}
       <div className="h-28 flex items-end shrink-0">
-        {(statement || (state.phase === 'vote' && voteTarget)) && !isNextUp && (
+        {!isNextUp && state.phase === 'describe' && statement && (
           <ThoughtBubble
             text={statement}
-            targetModelSlug={state.phase === 'vote' && voteTarget ? voteTarget.modelSlug as ModelSlug : undefined}
-            active={state.currentSpeaker === focus.id && state.phase !== 'vote'}
+            active={state.currentSpeaker === focus.id}
+            size="lg"
+          />
+        )}
+        {!isNextUp && (state.phase === 'vote' || state.phase === 'tiebreak') && voteTarget && (
+          <ThoughtBubble
+            targetModelSlug={voteTarget.modelSlug as ModelSlug}
             size="lg"
           />
         )}

@@ -58,7 +58,15 @@ export function createRealLLM(): LLM {
       }
 
       // partialOutputStream yields unvalidated partials — validate the final one.
-      return DescribeSchema.parse(finalPartial)
+      try {
+        return DescribeSchema.parse(finalPartial)
+      } catch (err) {
+        console.error(`[describe] schema parse failed for ${req.modelSlug}:`, {
+          err: String(err),
+          finalPartial,
+        })
+        throw err
+      }
     },
 
     async vote(req): Promise<VoteOutput> {

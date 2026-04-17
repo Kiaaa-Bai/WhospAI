@@ -7,13 +7,13 @@ import { ALL_PLAYER_IDS } from './types'
 // `statement`   — short public phrase (3–8 words).
 export const DescribeSchema = z.object({
   reasoning: z.string().min(1).max(2000),
-  summary: z.string().min(1).max(120),
-  statement: z.string().min(1).max(50),
+  summary: z.string().min(1).max(200),
+  statement: z.string().min(1).max(120),
 })
 
 export const VoteSchema = z.object({
   reasoning: z.string().min(1).max(2000),
-  summary: z.string().min(1).max(120),
+  summary: z.string().min(1).max(200),
   targetPlayerId: z.enum(ALL_PLAYER_IDS as unknown as [string, ...string[]]),
 })
 

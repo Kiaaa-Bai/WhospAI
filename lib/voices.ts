@@ -22,7 +22,7 @@ const VOICES: Record<string, ProviderVoices> = {
   openai:    { en: 'en-US-AriaNeural',         zh: 'zh-CN-XiaoxiaoNeural', ja: 'ja-JP-NanamiNeural' },
   anthropic: { en: 'en-US-GuyNeural',          zh: 'zh-CN-YunyangNeural',  ja: 'ja-JP-KeitaNeural'  },
   google:    { en: 'en-US-JennyNeural',        zh: 'zh-CN-XiaoyiNeural',   ja: 'ja-JP-NanamiNeural' },
-  deepseek:  { en: 'en-US-DavisNeural',        zh: 'zh-CN-YunjianNeural',  ja: 'ja-JP-KeitaNeural'  },
+  deepseek:  { en: 'en-US-BrianNeural',        zh: 'zh-CN-YunxiNeural',    ja: 'ja-JP-KeitaNeural'  },
   xai:       { en: 'en-US-ChristopherNeural',  zh: 'zh-CN-XiaohanNeural',  ja: 'ja-JP-KeitaNeural'  },
   alibaba:   { en: 'en-US-EmmaNeural',         zh: 'zh-CN-XiaomengNeural', ja: 'ja-JP-NanamiNeural' },
 }

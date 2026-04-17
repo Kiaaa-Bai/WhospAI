@@ -132,6 +132,17 @@ export function usePlaybackDispatch(
           continue
         }
 
+        // Failed vote / describe path: reasoning is a "(failed: …)" marker.
+        // Skip animation and TTS, brief flash, continue.
+        if (item.think.startsWith('(failed:') || item.speak.startsWith('(failed:')) {
+          dispatch(item.startEvent)
+          await sleep(ERROR_FLASH_MS)
+          if (abortedRef.current) return
+          dispatch(item.end)
+          queueRef.current.shift()
+          continue
+        }
+
         // Normal path: start → (reasoning + voice) → pause → (statement + voice)
         //   → linger → end.
         dispatch(item.startEvent)
@@ -151,8 +162,16 @@ export function usePlaybackDispatch(
             speakText(item.speak, item.playerId),
           ])
           if (abortedRef.current) return
-        } else if (item.phase === 'vote' && item.voteTargetId) {
+        }
+
+        // Dispatch end event BEFORE the linger so state (statements array,
+        // currentRoundVotes, etc.) is fully updated during the dwell time.
+        // Reducer keeps currentSpeaker set so focus doesn't jump away.
+        dispatch(item.end)
+
+        if (item.phase === 'vote' && item.voteTargetId) {
           // Announce the vote verbally: "I vote for X." in the voter's language.
+          // Happens AFTER vote-cast so the target avatar is already rendered.
           const voter = playersRef.current.get(item.playerId)
           const target = playersRef.current.get(item.voteTargetId)
           if (voter && target) {
@@ -165,7 +184,6 @@ export function usePlaybackDispatch(
         await sleep(POST_TURN_LINGER_MS)
         if (abortedRef.current) return
 
-        dispatch(item.end)
         queueRef.current.shift()
       }
     } finally {
