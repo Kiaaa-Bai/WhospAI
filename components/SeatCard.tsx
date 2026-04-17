@@ -1,5 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
+import { Detective, Shield } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
 import type { Player, ModelSlug } from '@/lib/game/types'
@@ -17,14 +18,16 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
   const showBubble = currentSpeech || (phase === 'vote' && voteTarget)
   const role = player.role
   const roleAccent = role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
+  const RoleIcon = role === 'undercover' ? Detective : Shield
+  const roleIconColor = role === 'undercover' ? 'text-red-400' : 'text-emerald-400'
 
   return (
     <motion.div
       layout
       className="flex flex-col items-center gap-2 w-full relative"
     >
-      {/* Bubble above head */}
-      <div className="min-h-12 flex items-end">
+      {/* Bubble above head — generous reserved space */}
+      <div className="h-24 flex items-end justify-center w-full">
         {showBubble && !eliminated && (
           <ThoughtBubble
             text={currentSpeech}
@@ -37,7 +40,7 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
 
       {/* Avatar */}
       <div className={`relative ${isActive ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full' : ''}`}>
-        <Avatar modelSlug={player.modelSlug} size={56} className={eliminated ? 'grayscale opacity-40' : ''} />
+        <Avatar modelSlug={player.modelSlug} size={60} className={eliminated ? 'grayscale opacity-40' : ''} />
         {eliminated && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-red-500 text-4xl font-bold">✕</span>
@@ -45,10 +48,13 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
         )}
       </div>
 
-      {/* Desk: name + word — bigger */}
-      <div className={`w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-center ${eliminated ? 'opacity-40' : ''}`}>
+      {/* Desk: taller, name + word + role icon */}
+      <div className={`w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-center min-h-[110px] flex flex-col justify-between ${eliminated ? 'opacity-40' : ''}`}>
         <div className="text-xs text-zinc-400 truncate">{player.displayName}</div>
-        <div className={`text-lg font-bold truncate ${roleAccent}`}>{player.word}</div>
+        <div className={`text-xl font-bold truncate my-2 ${roleAccent}`}>{player.word}</div>
+        <div className="flex items-center justify-center">
+          <RoleIcon weight="fill" size={16} className={roleIconColor} />
+        </div>
       </div>
     </motion.div>
   )

@@ -1,5 +1,6 @@
 'use client'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SkipForward, Brain, Shield, Detective } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
 import type { GameState } from '@/hooks/useGameReducer'
@@ -54,7 +55,10 @@ export function MainStage({ state }: Props) {
           />
         )}
         {isNextUp && (
-          <div className="text-xs text-zinc-500 uppercase tracking-wider">↓ next up</div>
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 uppercase tracking-wider">
+            <SkipForward weight="fill" size={14} />
+            next up
+          </div>
         )}
       </div>
 
@@ -74,11 +78,20 @@ export function MainStage({ state }: Props) {
 
           {/* Desk — fills remaining vertical space, reasoning scrolls inside */}
           <div className="w-full flex-1 min-h-0 flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-center">
-            <div className="shrink-0 text-base text-zinc-400">{focus.displayName}</div>
+            <div className="shrink-0 flex items-center justify-center gap-2 text-base text-zinc-400">
+              {focus.role === 'undercover'
+                ? <Detective weight="fill" size={18} className="text-red-400" />
+                : <Shield weight="fill" size={18} className="text-emerald-400" />}
+              {focus.displayName}
+            </div>
             <div className={`shrink-0 text-5xl font-bold mb-4 ${roleAccent}`}>{focus.word}</div>
 
             <div className="flex-1 min-h-0 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-left text-sm text-zinc-300 whitespace-pre-wrap break-words overflow-y-auto">
-              {reasoning || <span className="italic text-zinc-500">thinking…</span>}
+              {reasoning || (
+                <span className="italic text-zinc-500 flex items-center gap-1.5">
+                  <Brain weight="fill" size={14} /> thinking…
+                </span>
+              )}
             </div>
           </div>
         </motion.div>

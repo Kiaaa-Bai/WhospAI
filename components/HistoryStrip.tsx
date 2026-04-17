@@ -1,4 +1,5 @@
 'use client'
+import { HandPointing } from '@phosphor-icons/react'
 import type { GameState } from '@/hooks/useGameReducer'
 
 /**
@@ -36,8 +37,13 @@ export function HistoryStrip({ state }: { state: GameState }) {
                 >
                   <div className="text-zinc-500 font-mono text-[10px]">R{r}</div>
                   <div className="text-zinc-300 truncate">{short}</div>
-                  <div className="text-amber-400 truncate">
-                    {vote ? (vote.targetId ? `→ ${vote.targetId}` : '—') : ''}
+                  <div className="text-amber-400 truncate flex items-center gap-1">
+                    {vote && vote.targetId ? (
+                      <>
+                        <HandPointing weight="fill" size={10} />
+                        {vote.targetId}
+                      </>
+                    ) : vote ? '—' : ''}
                   </div>
                 </div>
               )
