@@ -26,8 +26,8 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
       layout
       className="flex flex-col items-center gap-2 w-full relative"
     >
-      {/* Bubble above head — generous reserved space */}
-      <div className="h-24 flex items-end justify-center w-full">
+      {/* Bubble above head — compact; grows downward when content wraps */}
+      <div className="min-h-[56px] flex items-end justify-center w-full">
         {showBubble && !eliminated && (
           <ThoughtBubble
             text={currentSpeech}

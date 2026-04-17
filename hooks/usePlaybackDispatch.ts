@@ -1,22 +1,19 @@
 'use client'
 import { useCallback, useEffect, useRef } from 'react'
 import type { GameEvent, ModelSlug, Player, PlayerId } from '@/lib/game/types'
+import type { PreparedSpeech } from './useSpeech'
 import { detectTextLanguage } from '@/lib/voices'
 
-/**
- * Animation pacing for "human-like" playback.
- * Server events are buffered per-turn and replayed at these speeds,
- * decoupling the user-visible pace from the LLM generation pace.
- */
 const REASONING_MS_PER_CHAR = 40    // 25 chars/s
 const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s
 const PAUSE_BETWEEN_MS = 500
-const POST_TURN_LINGER_MS = 3000    // linger on speaker after they finish
+const POST_TURN_LINGER_MS = 3000
 const ERROR_FLASH_MS = 150
-// Overlay animation timing — must match PhaseOverlay / useOverlayTrigger.
-const OVERLAY_CURTAIN_DOWN_UP_MS = 400   // single curtain in/out
-const OVERLAY_ITEM_HOLD_MS = 1500         // text held at full opacity
-const OVERLAY_CROSSFADE_MS = 400          // text-to-text crossfade
+
+// Overlay timing — must match PhaseOverlay / useOverlayTrigger.
+const OVERLAY_CURTAIN_DOWN_UP_MS = 400
+const OVERLAY_ITEM_HOLD_MS = 1500
+const OVERLAY_CROSSFADE_MS = 400
 
 const OVERLAY_TRIGGERS = new Set([
   'game-start',
@@ -26,11 +23,6 @@ const OVERLAY_TRIGGERS = new Set([
   'no-elimination',
 ])
 
-/**
- * For a batch of `n` consecutive overlay triggers, compute the total time
- * the curtain is on screen (match useOverlayTrigger + PhaseOverlay):
- *   curtain-down + n * hold + (n-1) * crossfade + curtain-up
- */
 function overlayBatchDuration(n: number): number {
   if (n <= 0) return 0
   return (
@@ -50,13 +42,11 @@ interface TurnItem {
   speak: string
   voteTargetId: PlayerId | null
   end: GameEvent | null
-}
-
-function voteAnnouncement(word: string, targetName: string): string {
-  const lang = detectTextLanguage(word)
-  if (lang === 'zh') return `我投票给 ${targetName}。`
-  if (lang === 'ja') return `${targetName} に投票します。`
-  return `I vote for ${targetName}.`
+  // Preloaded TTS audio. Kicked off as soon as the turn's end event arrives
+  // so the fetch overlaps with whichever turn is currently animating.
+  thinkSpeech: PreparedSpeech | null
+  speakSpeech: PreparedSpeech | null
+  voteAnnouncementSpeech: PreparedSpeech | null
 }
 
 interface PassItem {
@@ -67,39 +57,42 @@ interface PassItem {
 type QueueItem = TurnItem | PassItem
 
 type SpeakFn = (text: string, modelSlug: ModelSlug) => Promise<void>
+type PrepareFn = (text: string, modelSlug: ModelSlug) => PreparedSpeech
 
-/**
- * Wraps a dispatch function so that speak/vote events play at a steady,
- * human-readable pace (typewriter), independent of server generation speed.
- *
- * - Non-turn events (round-start, phase, elimination, game-over…) pass through
- *   in order, but only after any preceding turn's animation has completed.
- * - Turn events are buffered; once a turn completes on the server, the client
- *   animates it: reasoning → 500ms pause → statement → 3s linger → end event.
- * - If a `speak` callback is provided, summary and statement text are played
- *   aloud via TTS IN PARALLEL with the typewriter. Each phase waits for BOTH
- *   the typewriter and the TTS to finish before proceeding.
- * - game-start events are intercepted to cache the playerId→modelSlug mapping
- *   so TTS can pick the right voice without a separate lookup path.
- */
+function voteAnnouncement(word: string, targetName: string): string {
+  const lang = detectTextLanguage(word)
+  if (lang === 'zh') return `我投票给 ${targetName}。`
+  if (lang === 'ja') return `${targetName} に投票します。`
+  return `I vote for ${targetName}.`
+}
+
 export function usePlaybackDispatch(
   dispatch: (e: GameEvent) => void,
   speak?: SpeakFn,
+  prepare?: PrepareFn,
 ): (e: GameEvent) => void {
   const queueRef = useRef<QueueItem[]>([])
   const runningRef = useRef(false)
   const abortedRef = useRef(false)
   const slugsRef = useRef<Map<PlayerId, ModelSlug>>(new Map())
   const playersRef = useRef<Map<PlayerId, Player>>(new Map())
-  // Keep `speak` in a ref so the stable `drain` closure always calls the
-  // latest callback (which captures the latest enabled/voices state).
+  // Refs so the stable `drain` closure reaches the latest callbacks.
   const speakRef = useRef<SpeakFn | undefined>(speak)
+  const prepareRef = useRef<PrepareFn | undefined>(prepare)
   useEffect(() => { speakRef.current = speak }, [speak])
+  useEffect(() => { prepareRef.current = prepare }, [prepare])
 
   useEffect(() => {
     abortedRef.current = false
     return () => {
       abortedRef.current = true
+      // Cancel any pending prepared audio to avoid leaking fetches.
+      for (const item of queueRef.current) {
+        if (item.kind !== 'turn') continue
+        item.thinkSpeech?.cancel()
+        item.speakSpeech?.cancel()
+        item.voteAnnouncementSpeech?.cancel()
+      }
     }
   }, [])
 
@@ -122,7 +115,8 @@ export function usePlaybackDispatch(
     [dispatch],
   )
 
-  const speakText = useCallback(
+  /** Fallback when no preloaded speech handle exists. */
+  const speakTextNow = useCallback(
     (text: string, playerId: PlayerId): Promise<void> => {
       const fn = speakRef.current
       const slug = slugsRef.current.get(playerId)
@@ -144,8 +138,6 @@ export function usePlaybackDispatch(
           queueRef.current.shift()
           dispatch(item.event)
           if (OVERLAY_TRIGGERS.has(item.event.type)) {
-            // Greedily consume any subsequent overlay triggers into this batch
-            // so the PhaseOverlay plays them under a single curtain.
             let count = 1
             while (true) {
               const next = queueRef.current[0]
@@ -164,8 +156,14 @@ export function usePlaybackDispatch(
         // Turn: wait for end event to arrive before animating.
         if (!item.end) break
 
-        // Error path: brief flash, no text animation.
-        if (item.end.type === 'speak-error') {
+        // Failed vote / describe: skip animation + TTS entirely.
+        if (item.end.type === 'speak-error'
+            || item.think.startsWith('(failed:')
+            || item.speak.startsWith('(failed:')) {
+          // Cancel any audio we preloaded for this turn.
+          item.thinkSpeech?.cancel()
+          item.speakSpeech?.cancel()
+          item.voteAnnouncementSpeech?.cancel()
           dispatch(item.startEvent)
           await sleep(ERROR_FLASH_MS)
           if (abortedRef.current) return
@@ -174,24 +172,15 @@ export function usePlaybackDispatch(
           continue
         }
 
-        // Failed vote / describe path: reasoning is a "(failed: …)" marker.
-        // Skip animation and TTS, brief flash, continue.
-        if (item.think.startsWith('(failed:') || item.speak.startsWith('(failed:')) {
-          dispatch(item.startEvent)
-          await sleep(ERROR_FLASH_MS)
-          if (abortedRef.current) return
-          dispatch(item.end)
-          queueRef.current.shift()
-          continue
-        }
-
-        // Normal path: start → (reasoning + voice) → pause → (statement + voice)
-        //   → linger → end.
         dispatch(item.startEvent)
 
+        // Reasoning / summary: typewriter + preloaded TTS in parallel.
+        const thinkPlay = item.thinkSpeech
+          ? item.thinkSpeech.play()
+          : speakTextNow(item.think, item.playerId)
         await Promise.all([
           animateChars(item.think, item.playerId, 'think-token', REASONING_MS_PER_CHAR),
-          speakText(item.think, item.playerId),
+          thinkPlay,
         ])
         if (abortedRef.current) return
 
@@ -199,26 +188,24 @@ export function usePlaybackDispatch(
         if (abortedRef.current) return
 
         if (item.phase === 'describe') {
+          const speakPlay = item.speakSpeech
+            ? item.speakSpeech.play()
+            : speakTextNow(item.speak, item.playerId)
           await Promise.all([
             animateChars(item.speak, item.playerId, 'speak-token', STATEMENT_MS_PER_CHAR),
-            speakText(item.speak, item.playerId),
+            speakPlay,
           ])
           if (abortedRef.current) return
         }
 
-        // Dispatch end event BEFORE the linger so state (statements array,
-        // currentRoundVotes, etc.) is fully updated during the dwell time.
-        // Reducer keeps currentSpeaker set so focus doesn't jump away.
+        // Commit end state (currentRoundVotes populated, statements appended)
+        // before the linger so the UI shows the final snapshot during dwell.
         dispatch(item.end)
 
-        if (item.phase === 'vote' && item.voteTargetId) {
-          // Announce the vote verbally: "I vote for X." in the voter's language.
-          // Happens AFTER vote-cast so the target avatar is already rendered.
-          const voter = playersRef.current.get(item.playerId)
-          const target = playersRef.current.get(item.voteTargetId)
-          if (voter && target) {
-            const line = voteAnnouncement(voter.word, target.displayName)
-            await speakText(line, item.playerId)
+        if (item.phase === 'vote') {
+          const announce = item.voteAnnouncementSpeech
+          if (announce) {
+            await announce.play()
             if (abortedRef.current) return
           }
         }
@@ -231,7 +218,27 @@ export function usePlaybackDispatch(
     } finally {
       runningRef.current = false
     }
-  }, [dispatch, animateChars, speakText])
+  }, [dispatch, animateChars, speakTextNow])
+
+  const preloadTurn = (turn: TurnItem) => {
+    const prep = prepareRef.current
+    const slug = slugsRef.current.get(turn.playerId)
+    if (!prep || !slug) return
+    if (turn.think) {
+      turn.thinkSpeech = prep(turn.think, slug)
+    }
+    if (turn.phase === 'describe' && turn.speak) {
+      turn.speakSpeech = prep(turn.speak, slug)
+    }
+    if (turn.phase === 'vote' && turn.voteTargetId) {
+      const voter = playersRef.current.get(turn.playerId)
+      const target = playersRef.current.get(turn.voteTargetId)
+      if (voter && target) {
+        const line = voteAnnouncement(voter.word, target.displayName)
+        turn.voteAnnouncementSpeech = prep(line, slug)
+      }
+    }
+  }
 
   return useCallback(
     (e: GameEvent) => {
@@ -246,7 +253,6 @@ export function usePlaybackDispatch(
 
       switch (e.type) {
         case 'game-start': {
-          // Cache player info so TTS can resolve voices and display names by id.
           slugsRef.current = new Map(e.players.map(p => [p.id, p.modelSlug]))
           playersRef.current = new Map(e.players.map(p => [p.id, p]))
           queue.push({ kind: 'pass', event: e })
@@ -262,6 +268,9 @@ export function usePlaybackDispatch(
             speak: '',
             voteTargetId: null,
             end: null,
+            thinkSpeech: null,
+            speakSpeech: null,
+            voteAnnouncementSpeech: null,
           })
           break
         case 'vote-start':
@@ -274,6 +283,9 @@ export function usePlaybackDispatch(
             speak: '',
             voteTargetId: null,
             end: null,
+            thinkSpeech: null,
+            speakSpeech: null,
+            voteAnnouncementSpeech: null,
           })
           break
         case 'think-token': {
@@ -288,17 +300,19 @@ export function usePlaybackDispatch(
         }
         case 'speak-end': {
           const turn = findOpenTurn(e.statement.playerId)
-          if (turn) turn.end = e
+          if (turn) {
+            turn.end = e
+            preloadTurn(turn)
+          }
           break
         }
         case 'vote-cast': {
           const turn = findOpenTurn(e.vote.voterId)
           if (turn) {
-            // Vote reasoning is delivered atomically in vote.reasoning — inject
-            // it as the think content so the animation can type it out.
             turn.think = e.vote.reasoning
             turn.voteTargetId = e.vote.targetId
             turn.end = e
+            preloadTurn(turn)
           }
           break
         }

@@ -45,7 +45,7 @@ export function ThoughtBubble({
     padding = isXL ? 'p-3' : isLarge ? 'p-2' : 'p-1.5'
   } else if (isXL) {
     textSize = autoTextSize(text ?? '')
-    padding = `px-8 py-6 ${textSize} font-semibold leading-snug`
+    padding = `px-8 py-6 ${textSize} font-semibold leading-snug text-center`
   } else if (isLarge) {
     padding = 'px-5 py-3 text-xl max-w-md font-medium'
   } else {

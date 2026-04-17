@@ -4,22 +4,28 @@ import { voiceFor } from '@/lib/voices'
 import type { ModelSlug } from '@/lib/game/types'
 
 const STORAGE_KEY = 'whospy:tts-enabled'
+const RETRY_DELAYS = [0, 300, 800] // up to 3 attempts (first immediate)
+
+export interface PreparedSpeech {
+  /** Start playback. Resolves when the audio finishes (or times out). */
+  play: () => Promise<void>
+  /** Abort fetch/playback. */
+  cancel: () => void
+}
 
 export interface SpeechController {
-  /**
-   * True when TTS playback is available. Currently tied to whether the
-   * environment supports `Audio` + `fetch` — true in all modern browsers.
-   */
   supported: boolean
   enabled: boolean
   setEnabled: (on: boolean) => void
-  /**
-   * Speak `text` using the Edge TTS voice mapped to `modelSlug`. Returns a
-   * Promise that resolves when playback ends (or immediately if disabled /
-   * empty / aborted / errors out).
-   */
+  /** Speak immediately. Shortcut for `prepare(...).play()`. */
   speak: (text: string, modelSlug: ModelSlug) => Promise<void>
-  /** Cancel any in-flight speech and abort any pending fetch. */
+  /**
+   * Pre-load audio in the background. The returned handle's `play()` uses
+   * the pre-loaded blob (if ready) or waits for the fetch to finish.
+   * This lets callers kick off TTS fetches ahead of the moment they want
+   * playback, overlapping network latency with other work.
+   */
+  prepare: (text: string, modelSlug: ModelSlug) => PreparedSpeech
   cancel: () => void
 }
 
@@ -34,16 +40,40 @@ function loadInitialEnabled(): boolean {
   }
 }
 
+async function fetchBlobWithRetry(
+  text: string,
+  voice: string,
+  signal: AbortSignal,
+): Promise<Blob | null> {
+  for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
+    if (signal.aborted) return null
+    if (attempt > 0) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]))
+      if (signal.aborted) return null
+    }
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice }),
+        signal,
+      })
+      if (res.ok) return await res.blob()
+    } catch {
+      /* try again */
+    }
+  }
+  return null
+}
+
 export function useSpeech(): SpeechController {
   const supported = typeof window !== 'undefined' && 'Audio' in window
   const [enabled, setEnabledState] = useState<boolean>(loadInitialEnabled)
   const enabledRef = useRef(enabled)
   useEffect(() => { enabledRef.current = enabled }, [enabled])
 
-  // Active playback state so we can cancel cleanly.
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const urlRef = useRef<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
 
   const cleanup = useCallback(() => {
     if (audioRef.current) {
@@ -55,19 +85,12 @@ export function useSpeech(): SpeechController {
       try { URL.revokeObjectURL(urlRef.current) } catch { /* noop */ }
       urlRef.current = null
     }
-    if (abortRef.current) {
-      try { abortRef.current.abort() } catch { /* noop */ }
-      abortRef.current = null
-    }
   }, [])
 
-  const cancel = useCallback(() => {
-    cleanup()
-  }, [cleanup])
+  const cancel = useCallback(() => cleanup(), [cleanup])
 
-  // Stop on unmount.
   useEffect(() => {
-    return () => { cleanup() }
+    return () => cleanup()
   }, [cleanup])
 
   const setEnabled = useCallback((on: boolean) => {
@@ -78,76 +101,84 @@ export function useSpeech(): SpeechController {
     if (!on) cleanup()
   }, [cleanup])
 
-  const speak = useCallback(
-    async (text: string, modelSlug: ModelSlug): Promise<void> => {
-      if (!supported || !enabledRef.current || !text.trim()) return
-
-      // If a previous utterance is still playing, stop it.
-      cleanup()
+  const prepare = useCallback(
+    (text: string, modelSlug: ModelSlug): PreparedSpeech => {
+      const noop: PreparedSpeech = {
+        play: () => Promise.resolve(),
+        cancel: () => {},
+      }
+      if (!supported || !text.trim()) return noop
 
       const voice = voiceFor(modelSlug, text)
       const ctrl = new AbortController()
-      abortRef.current = ctrl
+      // Kick off the fetch immediately so it can overlap with whatever is
+      // currently playing. If TTS gets disabled before play() is called,
+      // the blob is just discarded.
+      const blobPromise = fetchBlobWithRetry(text, voice, ctrl.signal)
+      let cancelled = false
 
-      // Fetch MP3 with one retry to smooth over transient Edge TTS hiccups.
-      const fetchAudio = async (): Promise<Blob | null> => {
-        try {
-          const res = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, voice }),
-            signal: ctrl.signal,
-          })
-          if (!res.ok) return null
-          return await res.blob()
-        } catch {
-          return null
-        }
-      }
-      let blob = await fetchAudio()
-      if (!blob && !ctrl.signal.aborted) {
-        await new Promise(r => setTimeout(r, 300))
-        blob = await fetchAudio()
-      }
-      if (!blob) {
-        // Fallback: hold the turn for a duration proportional to text length
-        // so the player doesn't lose their beat when TTS fails.
-        const fallbackMs = Math.min(6000, Math.max(1500, text.length * 60))
-        await new Promise(r => setTimeout(r, fallbackMs))
-        return
-      }
-
-      if (abortRef.current !== ctrl) return  // another call superseded this one
-
-      const url = URL.createObjectURL(blob)
-      urlRef.current = url
-      const audio = new Audio(url)
-      audio.volume = 1
-      audioRef.current = audio
-
-      return new Promise<void>(resolve => {
-        let settled = false
-        const done = () => {
-          if (settled) return
-          settled = true
-          if (audioRef.current === audio) audioRef.current = null
-          if (urlRef.current === url) {
-            try { URL.revokeObjectURL(url) } catch { /* noop */ }
-            urlRef.current = null
+      return {
+        cancel: () => {
+          cancelled = true
+          try { ctrl.abort() } catch { /* noop */ }
+        },
+        play: async () => {
+          if (cancelled) return
+          if (!enabledRef.current) {
+            // User disabled TTS — still wait out the fetch / return quickly.
+            return
           }
-          resolve()
-        }
-        audio.onended = done
-        audio.onerror = done
-        audio.onpause = () => {
-          // Pause on cancel: the audio element is paused and src cleared.
-          if (!audioRef.current) done()
-        }
-        audio.play().catch(done)
-      })
+          let blob: Blob | null
+          try {
+            blob = await blobPromise
+          } catch {
+            blob = null
+          }
+          if (cancelled || !enabledRef.current) return
+          if (!blob) {
+            // All retries failed — hold the turn for a duration proportional
+            // to text length so the pacing isn't broken.
+            const fallbackMs = Math.min(6000, Math.max(1500, text.length * 60))
+            await new Promise(resolve => setTimeout(resolve, fallbackMs))
+            return
+          }
+
+          cleanup()
+          const url = URL.createObjectURL(blob)
+          urlRef.current = url
+          const audio = new Audio(url)
+          audio.volume = 1
+          audioRef.current = audio
+
+          return new Promise<void>(resolve => {
+            let settled = false
+            const done = () => {
+              if (settled) return
+              settled = true
+              if (audioRef.current === audio) audioRef.current = null
+              if (urlRef.current === url) {
+                try { URL.revokeObjectURL(url) } catch { /* noop */ }
+                urlRef.current = null
+              }
+              resolve()
+            }
+            audio.onended = done
+            audio.onerror = done
+            audio.play().catch(done)
+          })
+        },
+      }
     },
     [supported, cleanup],
   )
 
-  return { supported, enabled, setEnabled, speak, cancel }
+  const speak = useCallback(
+    (text: string, modelSlug: ModelSlug): Promise<void> => {
+      const prepared = prepare(text, modelSlug)
+      return prepared.play()
+    },
+    [prepare],
+  )
+
+  return { supported, enabled, setEnabled, speak, prepare, cancel }
 }

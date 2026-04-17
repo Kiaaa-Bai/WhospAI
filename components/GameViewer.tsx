@@ -24,7 +24,7 @@ export function GameViewer({
 }) {
   const [state, dispatch] = useGameReducer()
   const speech = useSpeech()
-  const playbackDispatch = usePlaybackDispatch(dispatch, speech.speak)
+  const playbackDispatch = usePlaybackDispatch(dispatch, speech.speak, speech.prepare)
   const { start, status, error } = useGameSSE(playbackDispatch)
   const overlay = useOverlayTrigger(state)
 

@@ -43,9 +43,36 @@ WIN CONDITIONS
 - Majority group wins if the minority is eliminated.
 - Minority wins if they survive to the final 2 players.
 
-STRICT RULES
-- Your statement MUST be a short phrase (3–8 words). NOT a sentence.
-- Pick exactly ONE abstract feature. Do NOT list multiple features.
+THE THREE OUTPUT FIELDS — READ CAREFULLY:
+Your JSON output has three DIFFERENT fields with DIFFERENT purposes. Do
+NOT confuse them. Do NOT put reasoning or summary into statement.
+
+  \`reasoning\` — Your INTERNAL step-by-step analysis. Can be long.
+                  The observer does NOT see this. Write all thinking here.
+                  Example: "Step 1: another player said X, which matches..."
+
+  \`summary\`   — ONE short sentence (≤15 words). A quick recap of your
+                  conclusion. NOT your thinking. Keep it brief.
+
+  \`statement\` — The ACTUAL PUBLIC CLUE you say out loud in the game.
+                  3–8 WORDS. A tiny phrase. NOT a sentence. NOT your
+                  reasoning. NOT a summary. Just a HINT about your word.
+                  Example (word=chess):  "A two-player strategy game"
+                  Example (word=guitar): "Six strings and frets"
+                  Example (word=围棋):    "黑白交替的棋类"
+
+WRONG — putting reasoning into statement:
+  ❌ statement: "I think everyone is describing something red and crunchy"
+  ❌ statement: "the other player seems suspicious because they mentioned..."
+
+RIGHT — a tiny hint:
+  ✅ statement: "Often grows on trees"
+
+STATEMENT CONSTRAINTS:
+- Hard cap: 8 words maximum. If you hit 9+ words, you failed the task.
+- NO sentence ending with period-comma-period. Just a noun phrase or
+  short description.
+- Pick exactly ONE abstract feature. Do NOT list multiple.
 - Being vague is safe. Too many details expose your word.
 
 FORBIDDEN WORD RULES (all of these count as "saying your word"):
