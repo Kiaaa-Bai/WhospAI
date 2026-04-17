@@ -1,0 +1,52 @@
+'use client'
+import { motion } from 'framer-motion'
+import { Avatar } from './Avatar'
+import { ThoughtBubble } from './ThoughtBubble'
+import type { Player, ModelSlug } from '@/lib/game/types'
+
+interface Props {
+  player: Player
+  currentSpeech?: string
+  isActive: boolean
+  voteTarget?: ModelSlug | null
+  phase: string
+}
+
+export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }: Props) {
+  const eliminated = player.eliminated
+  const showBubble = currentSpeech || (phase === 'vote' && voteTarget)
+  const role = player.role
+  const roleAccent = role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
+
+  return (
+    <motion.div
+      layout
+      className="flex flex-col items-center gap-1 w-24 relative"
+    >
+      <div className="h-10 flex items-end">
+        {showBubble && !eliminated && (
+          <ThoughtBubble
+            text={currentSpeech}
+            targetModelSlug={phase === 'vote' && voteTarget ? voteTarget : undefined}
+            active={isActive && phase !== 'vote'}
+            size="sm"
+          />
+        )}
+      </div>
+
+      <div className={`relative ${isActive ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full' : ''}`}>
+        <Avatar modelSlug={player.modelSlug} size={48} className={eliminated ? 'grayscale opacity-40' : ''} />
+        {eliminated && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-red-500 text-3xl font-bold">✕</span>
+          </div>
+        )}
+      </div>
+
+      <div className={`w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-center ${eliminated ? 'opacity-40' : ''}`}>
+        <div className="text-[10px] text-zinc-400 truncate">{player.displayName}</div>
+        <div className={`text-xs font-bold truncate ${roleAccent}`}>{player.word}</div>
+      </div>
+    </motion.div>
+  )
+}

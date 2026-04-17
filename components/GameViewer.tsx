@@ -2,9 +2,9 @@
 import { useEffect } from 'react'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useGameReducer } from '@/hooks/useGameReducer'
-import { PlayerRow } from './PlayerRow'
-import { EliminationHistory } from './EliminationHistory'
-import { InnerThoughtsDrawer } from './InnerThoughtsDrawer'
+import { MainStage } from './MainStage'
+import { PanelSeats } from './PanelSeats'
+import { InfoBox } from './InfoBox'
 import { GameOverOverlay } from './GameOverOverlay'
 import type { GameConfig } from '@/lib/game/types'
 
@@ -24,18 +24,23 @@ export function GameViewer({
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-zinc-900 text-zinc-100 pb-72">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        <div className="font-bold text-lg">Whospy</div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <header className="flex items-center justify-between px-6 py-3 border-b border-zinc-800">
+        <div className="font-bold text-lg">WHOSPY</div>
         <div className="text-xs text-zinc-500">
           {state.phase !== 'setup' && (
             <>
-              Round {state.round} ·{' '}
-              <span className="uppercase">{state.phase}</span> ·{' '}
-              Alive: {state.players.filter(p => !p.eliminated).length}
+              Round {state.round} · <span className="uppercase">{state.phase}</span> · Alive:{' '}
+              {state.players.filter(p => !p.eliminated).length}
             </>
           )}
         </div>
+        <button
+          onClick={onExit}
+          className="text-xs text-zinc-500 hover:text-zinc-300"
+        >
+          exit
+        </button>
       </header>
 
       {error && (
@@ -55,12 +60,23 @@ export function GameViewer({
         <div className="text-center mt-16 text-zinc-400">Dealing the words…</div>
       )}
 
-      <PlayerRow state={state} />
-      <EliminationHistory state={state} />
+      {state.players.length > 0 && (
+        <div className="grid grid-cols-[360px_1fr] gap-6 px-6 py-6">
+          <div className="sticky top-4 self-start">
+            <MainStage state={state} />
+          </div>
+          <div className="space-y-6">
+            <PanelSeats state={state} />
+            <InfoBox
+              state={state}
+              civilianWord={config.civilianWord}
+              undercoverWord={config.undercoverWord}
+            />
+          </div>
+        </div>
+      )}
 
       {state.result && <GameOverOverlay result={state.result} onPlayAgain={onExit} />}
-
-      {state.players.length > 0 && <InnerThoughtsDrawer state={state} />}
     </div>
   )
 }
