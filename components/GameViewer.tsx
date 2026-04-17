@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { XCircle, Users, Skull, FilmSlate } from '@phosphor-icons/react'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useGameReducer } from '@/hooks/useGameReducer'
+import { usePlaybackDispatch } from '@/hooks/usePlaybackDispatch'
 import { MainStage } from './MainStage'
 import { PanelSeats } from './PanelSeats'
 import { InfoBox } from './InfoBox'
@@ -17,7 +18,8 @@ export function GameViewer({
   onExit: () => void
 }) {
   const [state, dispatch] = useGameReducer()
-  const { start, status, error } = useGameSSE(e => dispatch(e))
+  const playbackDispatch = usePlaybackDispatch(dispatch)
+  const { start, status, error } = useGameSSE(playbackDispatch)
 
   useEffect(() => {
     start(config)
