@@ -21,9 +21,10 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
   return (
     <motion.div
       layout
-      className="flex flex-col items-center gap-1 w-24 relative"
+      className="flex flex-col items-center gap-2 w-full relative"
     >
-      <div className="h-10 flex items-end">
+      {/* Bubble above head */}
+      <div className="min-h-12 flex items-end">
         {showBubble && !eliminated && (
           <ThoughtBubble
             text={currentSpeech}
@@ -34,18 +35,20 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
         )}
       </div>
 
+      {/* Avatar */}
       <div className={`relative ${isActive ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full' : ''}`}>
-        <Avatar modelSlug={player.modelSlug} size={48} className={eliminated ? 'grayscale opacity-40' : ''} />
+        <Avatar modelSlug={player.modelSlug} size={56} className={eliminated ? 'grayscale opacity-40' : ''} />
         {eliminated && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-red-500 text-3xl font-bold">✕</span>
+            <span className="text-red-500 text-4xl font-bold">✕</span>
           </div>
         )}
       </div>
 
-      <div className={`w-full bg-zinc-950 border border-zinc-800 rounded px-1.5 py-1 text-center ${eliminated ? 'opacity-40' : ''}`}>
-        <div className="text-[10px] text-zinc-400 truncate">{player.displayName}</div>
-        <div className={`text-xs font-bold truncate ${roleAccent}`}>{player.word}</div>
+      {/* Desk: name + word — bigger */}
+      <div className={`w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-center ${eliminated ? 'opacity-40' : ''}`}>
+        <div className="text-xs text-zinc-400 truncate">{player.displayName}</div>
+        <div className={`text-lg font-bold truncate ${roleAccent}`}>{player.word}</div>
       </div>
     </motion.div>
   )

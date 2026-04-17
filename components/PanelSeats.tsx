@@ -8,7 +8,7 @@ export function PanelSeats({ state }: { state: GameState }) {
 
   return (
     <div>
-      <div className="flex gap-3 justify-center">
+      <div className="grid grid-cols-6 gap-3">
         {seatOrder.map(id => {
           const p = state.players.find(pp => pp.id === id)
           if (!p) return null
@@ -28,7 +28,7 @@ export function PanelSeats({ state }: { state: GameState }) {
         })}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4 grid grid-cols-6 gap-3">
         <HistoryStrip state={state} />
       </div>
     </div>
