@@ -24,8 +24,8 @@ export function GameViewer({
   }, [])
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="flex items-center justify-between px-6 py-3 border-b border-zinc-800">
+    <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden">
+      <header className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 shrink-0">
         <div className="font-bold text-lg">WHOSPY</div>
         <div className="text-xs text-zinc-500">
           {state.phase !== 'setup' && (
@@ -57,21 +57,25 @@ export function GameViewer({
       )}
 
       {status === 'streaming' && state.players.length === 0 && (
-        <div className="text-center mt-16 text-zinc-400">Dealing the words…</div>
+        <div className="flex-1 flex items-center justify-center text-zinc-400">Dealing the words…</div>
       )}
 
       {state.players.length > 0 && (
-        <div className="grid grid-cols-[360px_1fr] gap-6 px-6 py-6">
-          <div className="sticky top-4 self-start">
+        <div className="flex-1 min-h-0 grid grid-cols-[minmax(480px,45%)_1fr] gap-6 px-6 py-6">
+          <div className="min-h-0 overflow-hidden">
             <MainStage state={state} />
           </div>
-          <div className="space-y-6">
-            <PanelSeats state={state} />
-            <InfoBox
-              state={state}
-              civilianWord={config.civilianWord}
-              undercoverWord={config.undercoverWord}
-            />
+          <div className="min-h-0 flex flex-col gap-6">
+            <div className="shrink-0">
+              <PanelSeats state={state} />
+            </div>
+            <div className="flex-1 min-h-0">
+              <InfoBox
+                state={state}
+                civilianWord={config.civilianWord}
+                undercoverWord={config.undercoverWord}
+              />
+            </div>
           </div>
         </div>
       )}

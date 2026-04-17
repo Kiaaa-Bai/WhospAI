@@ -42,8 +42,9 @@ export function MainStage({ state }: Props) {
   const statement = state.currentSpeech[focus.id] ?? ''
 
   return (
-    <div className="flex flex-col items-center gap-4 h-full">
-      <div className="h-24 flex items-end">
+    <div className="flex flex-col items-center gap-4 h-full min-h-0">
+      {/* Bubble above head — fixed height so card below doesn't jump */}
+      <div className="h-28 flex items-end shrink-0">
         {(statement || (state.phase === 'vote' && voteTarget)) && !isNextUp && (
           <ThoughtBubble
             text={statement}
@@ -53,9 +54,7 @@ export function MainStage({ state }: Props) {
           />
         )}
         {isNextUp && (
-          <div className="text-xs text-zinc-500 uppercase tracking-wider">
-            ↓ next up
-          </div>
+          <div className="text-xs text-zinc-500 uppercase tracking-wider">↓ next up</div>
         )}
       </div>
 
@@ -65,18 +64,21 @@ export function MainStage({ state }: Props) {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="flex flex-col items-center gap-4 w-full"
+          className="flex flex-col items-center gap-5 w-full flex-1 min-h-0"
         >
-          <div className={`${state.currentSpeaker === focus.id ? 'ring-4 ring-amber-400 ring-offset-4 ring-offset-zinc-950 rounded-full' : ''}`}>
-            <Avatar modelSlug={focus.modelSlug} size={140} />
+          <div
+            className={`shrink-0 ${state.currentSpeaker === focus.id ? 'ring-4 ring-amber-400 ring-offset-4 ring-offset-zinc-950 rounded-full' : ''}`}
+          >
+            <Avatar modelSlug={focus.modelSlug} size={180} />
           </div>
 
-          <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-center space-y-1">
-            <div className="text-sm text-zinc-400">{focus.displayName}</div>
-            <div className={`text-4xl font-bold ${roleAccent}`}>{focus.word}</div>
+          {/* Desk — fills remaining vertical space, reasoning scrolls inside */}
+          <div className="w-full flex-1 min-h-0 flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-center">
+            <div className="shrink-0 text-base text-zinc-400">{focus.displayName}</div>
+            <div className={`shrink-0 text-5xl font-bold mb-4 ${roleAccent}`}>{focus.word}</div>
 
-            <div className="mt-3 min-h-[80px] bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-left text-xs text-zinc-400 whitespace-pre-wrap break-words">
-              {reasoning || <span className="italic opacity-60">thinking…</span>}
+            <div className="flex-1 min-h-0 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-left text-sm text-zinc-300 whitespace-pre-wrap break-words overflow-y-auto">
+              {reasoning || <span className="italic text-zinc-500">thinking…</span>}
             </div>
           </div>
         </motion.div>

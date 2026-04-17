@@ -14,9 +14,11 @@ export function ThoughtBubble({ text, targetModelSlug, active, size = 'sm' }: Pr
   if (!text && !targetModelSlug && !active) return null
 
   const isLarge = size === 'lg'
-  const bubble = `relative bg-white text-zinc-900 rounded-2xl border border-zinc-300 ${
-    isLarge ? 'px-4 py-3 text-base max-w-md' : 'px-2 py-1 text-xs max-w-[140px]'
-  }`
+  const isAvatar = !!targetModelSlug
+  const padding = isAvatar
+    ? (isLarge ? 'p-2' : 'p-1.5')
+    : (isLarge ? 'px-4 py-3 text-base max-w-md' : 'px-2 py-1 text-xs max-w-[140px]')
+  const bubble = `relative bg-white text-zinc-900 rounded-2xl border border-zinc-300 ${padding}`
 
   return (
     <motion.div
@@ -25,10 +27,7 @@ export function ThoughtBubble({ text, targetModelSlug, active, size = 'sm' }: Pr
       className={bubble}
     >
       {targetModelSlug ? (
-        <div className="flex items-center gap-2">
-          <span className={isLarge ? 'text-sm' : 'text-[10px]'}>voted →</span>
-          <Avatar modelSlug={targetModelSlug} size={isLarge ? 32 : 20} />
-        </div>
+        <Avatar modelSlug={targetModelSlug} size={isLarge ? 56 : 32} />
       ) : (
         <span className="whitespace-pre-wrap break-words">{text}</span>
       )}
