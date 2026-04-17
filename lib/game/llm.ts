@@ -9,7 +9,7 @@ export interface DescribeRequest {
   system: string
   prompt: string
   onToken: (delta: string) => void   // called with incremental statement text
-  onReasoningToken?: (delta: string) => void   // called with incremental reasoning text
+  onReasoningToken?: (delta: string) => void   // called with incremental summary (observer-facing)
   signal?: AbortSignal
 }
 
@@ -38,16 +38,16 @@ export function createRealLLM(): LLM {
         output: Output.object({ schema: DescribeSchema }),
       })
 
-      let lastReasoning = ''
+      let lastSummary = ''
       let lastStatement = ''
       let finalPartial: unknown = null
       for await (const partial of result.partialOutputStream) {
         finalPartial = partial
-        // Stream reasoning tokens
-        const reasoning = (partial as { reasoning?: unknown })?.reasoning
-        if (typeof reasoning === 'string' && reasoning.length > lastReasoning.length) {
-          req.onReasoningToken?.(reasoning.slice(lastReasoning.length))
-          lastReasoning = reasoning
+        // Stream summary tokens (observer-facing short version)
+        const summary = (partial as { summary?: unknown })?.summary
+        if (typeof summary === 'string' && summary.length > lastSummary.length) {
+          req.onReasoningToken?.(summary.slice(lastSummary.length))
+          lastSummary = summary
         }
         // Stream statement tokens
         const statement = (partial as { statement?: unknown })?.statement

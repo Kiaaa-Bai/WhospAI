@@ -31,8 +31,8 @@ export function createMockLLM(script: MockScript, opts: { tokenDelay?: number } 
       if (!output) throw new Error(`No mock describe output for ${key}`)
 
       const delay = opts.tokenDelay ?? 0
-      // Simulate streaming reasoning
-      for (const ch of output.reasoning) {
+      // Simulate streaming summary (observer-facing)
+      for (const ch of output.summary) {
         req.onReasoningToken?.(ch)
         if (delay > 0) await new Promise(r => setTimeout(r, delay))
       }

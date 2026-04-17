@@ -136,7 +136,8 @@ It is now your (${player.id}) turn to describe your word.
 
 Respond as JSON:
 {
-  "reasoning": "Step 1: What have others said? Step 2: Do their descriptions match my word? Step 3: Am I majority or minority? Step 4: What's my strategy? If minority, I MUST mimic what others describe, NOT my own word.",
+  "reasoning": "Your FULL internal analysis — be thorough. Walk through CRITICAL REASONING STEPS 1–6. This is your private scratchpad; the observer will NOT see this. Writing it all out helps you think clearly.",
+  "summary": "A ONE-sentence observer-facing summary of your key conclusion (max ~15 words). Example: 'I'm likely minority — others describe texture while mine has flavor.'",
   "statement": "a short phrase (3–8 words, NOT a full sentence)"
 }`
 }
@@ -156,7 +157,8 @@ Based on all statements, vote to eliminate ONE suspect.
 
 Respond as JSON:
 {
-  "reasoning": "who do you think has the different word, and why?",
+  "reasoning": "Your FULL internal analysis — be thorough. Private scratchpad; the observer will NOT see this.",
+  "summary": "A ONE-sentence observer-facing summary of who you suspect and why (max ~15 words). Example: 'Voting p3 — their description didn't match the rest.'",
   "targetPlayerId": "one of: ${alive.join(' | ')}"
 }`
 }

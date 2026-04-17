@@ -51,7 +51,7 @@ export async function runDescribe(
       round: ctx.round,
       text: out.statement,
     }
-    emit({ type: 'speak-end', statement, reasoning: out.reasoning })
+    emit({ type: 'speak-end', statement, reasoning: out.summary })
     return statement
   }
 
@@ -97,7 +97,7 @@ export async function runVote(
       voterId: voter.id,
       targetId: validTarget,
       round: ctx.round,
-      reasoning: out.reasoning,
+      reasoning: out.summary,
     }
   }
 

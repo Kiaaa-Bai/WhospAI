@@ -8,14 +8,14 @@ describe('runGame', () => {
     const script = {
       describes: Object.fromEntries(
         ['p1','p2','p3','p4','p5','p6'].flatMap(id =>
-          [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', statement: 'red' }])
+          [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', summary: 's', statement: 'red' }])
         )
       ),
       votes: Object.fromEntries(
         ['p1','p2','p3','p4','p5','p6'].flatMap(id =>
           [1,2,3,4,5,6].map(r => [
             mockKey(id as any, r),
-            { reasoning: 'r', targetPlayerId: id === 'p1' ? 'p2' : 'p1' },
+            { reasoning: 'r', summary: 's', targetPlayerId: id === 'p1' ? 'p2' : 'p1' },
           ])
         )
       ),
@@ -43,12 +43,12 @@ describe('runGame', () => {
     const script = {
       describes: Object.fromEntries(
         ['p1','p2','p3','p4','p5','p6'].flatMap(id =>
-          [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', statement: 'x' }])
+          [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', summary: 's', statement: 'x' }])
         )
       ),
       votes: Object.fromEntries(
         ['p1','p2','p3','p4','p5','p6'].flatMap(id =>
-          [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', targetPlayerId: 'p1' }])
+          [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', summary: 's', targetPlayerId: 'p1' }])
         )
       ),
     }

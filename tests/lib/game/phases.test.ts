@@ -28,7 +28,7 @@ describe('runDescribe', () => {
       describe: vi.fn(async (req) => {
         req.onToken('Hel')
         req.onToken('lo')
-        return { reasoning: 'because', statement: 'Hello' }
+        return { reasoning: 'because', summary: 'greeting', statement: 'Hello' }
       }),
     })
 
@@ -51,7 +51,7 @@ describe('runDescribe', () => {
         attempt++
         if (attempt === 1) throw new Error('boom')
         req.onToken('ok')
-        return { reasoning: 'r', statement: 'ok' }
+        return { reasoning: 'r', summary: 's', statement: 'ok' }
       }),
     })
 
@@ -83,7 +83,7 @@ describe('runVote', () => {
   it('emits vote-start and vote-cast on success', async () => {
     const events: GameEvent[] = []
     const llm = makeLLM({
-      vote: vi.fn(async () => ({ reasoning: 'suspicious', targetPlayerId: 'p2' })),
+      vote: vi.fn(async () => ({ reasoning: 'suspicious', summary: 'p2 looks off', targetPlayerId: 'p2' })),
     })
 
     const voter = mkPlayer('p1')
@@ -99,7 +99,7 @@ describe('runVote', () => {
   it('abstains (targetId=null) when LLM returns invalid target after retry', async () => {
     const events: GameEvent[] = []
     const llm = makeLLM({
-      vote: vi.fn(async () => ({ reasoning: 'r', targetPlayerId: 'p1' })), // self-vote
+      vote: vi.fn(async () => ({ reasoning: 'r', summary: 's', targetPlayerId: 'p1' })), // self-vote
     })
 
     const voter = mkPlayer('p1')
@@ -119,11 +119,11 @@ describe('runTiebreak', () => {
     const llm = makeLLM({
       describe: vi.fn(async (req) => {
         req.onToken('x')
-        return { reasoning: 'r', statement: 'x' }
+        return { reasoning: 'r', summary: 's', statement: 'x' }
       }),
       vote: vi.fn(async (req) => {
         // all vote for p2
-        return { reasoning: 'r', targetPlayerId: 'p2' }
+        return { reasoning: 'r', summary: 's', targetPlayerId: 'p2' }
       }),
     })
 
@@ -137,13 +137,13 @@ describe('runTiebreak', () => {
   it('returns no-elimination if tiebreak ties again', async () => {
     const events: GameEvent[] = []
     const llm = makeLLM({
-      describe: vi.fn(async () => ({ reasoning: 'r', statement: 'x' })),
+      describe: vi.fn(async () => ({ reasoning: 'r', summary: 's', statement: 'x' })),
       vote: vi.fn(async (req) => {
         // voters alternate: p1->p2, p2->p1, p3->p1, p4->p2 (ties)
         const voterMatch = req.system.match(/Player (p\d)/)
         const voter = voterMatch![1]
         const mapping: Record<string, string> = { p1: 'p2', p2: 'p1', p3: 'p1', p4: 'p2' }
-        return { reasoning: 'r', targetPlayerId: mapping[voter] }
+        return { reasoning: 'r', summary: 's', targetPlayerId: mapping[voter] }
       }),
     })
 
