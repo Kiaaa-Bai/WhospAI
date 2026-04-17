@@ -58,10 +58,12 @@ export async function runDescribe(
   try {
     return await attempt()
   } catch (firstErr) {
+    console.error(`[describe] ${player.modelSlug} first attempt failed:`, String(firstErr))
     if (isRateLimitError(firstErr)) await wait(RATE_LIMIT_BACKOFF_MS)
     try {
       return await attempt()
     } catch (err) {
+      console.error(`[describe] ${player.modelSlug} second attempt failed:`, String(err))
       emit({ type: 'speak-error', playerId: player.id, reason: String(err) })
       return null
     }

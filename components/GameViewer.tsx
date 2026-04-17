@@ -1,6 +1,9 @@
 'use client'
 import { useEffect } from 'react'
-import { XCircle, Users, Skull, FilmSlate, SpeakerHigh, SpeakerSlash } from '@phosphor-icons/react'
+import {
+  XCircle, Users, Skull, FilmSlate, SpeakerHigh, SpeakerSlash,
+  Shield, Detective,
+} from '@phosphor-icons/react'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useGameReducer } from '@/hooks/useGameReducer'
 import { useOverlayTrigger } from '@/hooks/useOverlayTrigger'
@@ -8,7 +11,6 @@ import { usePlaybackDispatch } from '@/hooks/usePlaybackDispatch'
 import { useSpeech } from '@/hooks/useSpeech'
 import { MainStage } from './MainStage'
 import { PanelSeats } from './PanelSeats'
-import { InfoBox } from './InfoBox'
 import { PhaseOverlay } from './PhaseOverlay'
 import { GameOverOverlay } from './GameOverOverlay'
 import type { GameConfig } from '@/lib/game/types'
@@ -32,53 +34,110 @@ export function GameViewer({
   }, [])
 
   const aliveCount = state.players.filter(p => !p.eliminated).length
+  const inGame = state.phase !== 'setup' && state.players.length > 0
 
   return (
     <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden">
-      <header className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 shrink-0">
-        <div className="font-bold text-lg tracking-wider">WHOSPY</div>
-        <div className="flex items-center gap-4 text-sm text-zinc-400">
-          {state.phase !== 'setup' && (
-            <>
-              <span className="flex items-center gap-1.5">
-                <FilmSlate weight="fill" size={16} className="text-zinc-500" />
-                R{state.round}
-              </span>
-              <span className="uppercase tracking-wider text-xs bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
-                {state.phase}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Users weight="fill" size={16} className="text-emerald-400" />
-                {aliveCount}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {speech.supported && (
+      <header className="shrink-0 border-b border-zinc-800">
+        {/* Row 1: title, game status, voice + exit */}
+        <div className="flex items-center justify-between px-6 py-3">
+          <div className="font-bold text-lg tracking-wider">WHOSPY</div>
+          <div className="flex items-center gap-4 text-sm text-zinc-400">
+            {inGame && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <FilmSlate weight="fill" size={16} className="text-zinc-500" />
+                  R{state.round}
+                </span>
+                <span className="uppercase tracking-wider text-xs bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
+                  {state.phase}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Users weight="fill" size={16} className="text-emerald-400" />
+                  {aliveCount}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {speech.supported && (
+              <button
+                onClick={() => speech.setEnabled(!speech.enabled)}
+                aria-label={speech.enabled ? 'Mute voice' : 'Enable voice'}
+                title={speech.enabled ? 'Mute voice' : 'Enable voice'}
+                className={`transition-colors ${
+                  speech.enabled
+                    ? 'text-amber-300 hover:text-amber-200'
+                    : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >
+                {speech.enabled
+                  ? <SpeakerHigh weight="fill" size={22} />
+                  : <SpeakerSlash weight="fill" size={22} />}
+              </button>
+            )}
             <button
-              onClick={() => speech.setEnabled(!speech.enabled)}
-              aria-label={speech.enabled ? 'Mute voice' : 'Enable voice'}
-              title={speech.enabled ? 'Mute voice' : 'Enable voice'}
-              className={`transition-colors ${
-                speech.enabled
-                  ? 'text-amber-300 hover:text-amber-200'
-                  : 'text-zinc-600 hover:text-zinc-400'
-              }`}
+              onClick={onExit}
+              aria-label="Exit"
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
             >
-              {speech.enabled
-                ? <SpeakerHigh weight="fill" size={22} />
-                : <SpeakerSlash weight="fill" size={22} />}
+              <XCircle weight="fill" size={22} />
             </button>
-          )}
-          <button
-            onClick={onExit}
-            aria-label="Exit"
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            <XCircle weight="fill" size={22} />
-          </button>
+          </div>
         </div>
+
+        {/* Row 2: word pair + eliminations */}
+        {inGame && (
+          <div className="flex items-center gap-6 px-6 py-2 bg-zinc-950/60 border-t border-zinc-900 overflow-x-auto">
+            <div className="flex items-center gap-2 shrink-0">
+              <Shield weight="fill" size={14} className="text-emerald-400" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Civilian</span>
+              <span className="text-sm text-emerald-300 font-bold">{config.civilianWord}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Detective weight="fill" size={14} className="text-red-400" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Undercover</span>
+              <span className="text-sm text-red-300 font-bold">{config.undercoverWord}</span>
+            </div>
+
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Skull weight="fill" size={14} className="text-zinc-500 shrink-0" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 shrink-0">
+                Eliminations
+              </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                {state.history.length === 0 ? (
+                  <span className="text-xs text-zinc-600 italic">none yet</span>
+                ) : (
+                  state.history.map((h, i) => {
+                    if (!h.eliminatedId) {
+                      return (
+                        <span
+                          key={i}
+                          className="text-[11px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500 shrink-0"
+                        >
+                          R{h.round}: tied
+                        </span>
+                      )
+                    }
+                    const p = state.players.find(pp => pp.id === h.eliminatedId)
+                    const color = h.role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
+                    return (
+                      <span
+                        key={i}
+                        className="text-[11px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 shrink-0 flex items-center gap-1"
+                      >
+                        <span className="text-zinc-600 font-mono">R{h.round}</span>
+                        <span className="font-medium">{p?.displayName ?? h.eliminatedId}</span>
+                        <span className={color}>· {h.role}</span>
+                      </span>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {error && (
@@ -97,31 +156,23 @@ export function GameViewer({
       )}
 
       {status === 'streaming' && state.players.length === 0 && (
-        <div className="flex-1 flex items-center justify-center text-zinc-400">Dealing the words…</div>
+        <div className="flex-1 flex items-center justify-center text-zinc-400">
+          Dealing the words…
+        </div>
       )}
 
       {state.players.length > 0 && (
-        <div className="flex-1 min-h-0 grid grid-cols-[minmax(480px,45%)_1fr] gap-6 px-6 py-6">
+        <div className="flex-1 min-h-0 grid grid-cols-[minmax(520px,48%)_1fr] gap-6 px-6 py-6">
           <div className="min-h-0 overflow-hidden">
             <MainStage state={state} />
           </div>
-          <div className="min-h-0 flex flex-col gap-4">
-            <div className="shrink-0">
-              <PanelSeats state={state} />
-            </div>
-            <div className="flex-1 min-h-0" />
-            <div className="shrink-0 h-[30vh] min-h-[200px]">
-              <InfoBox
-                state={state}
-                civilianWord={config.civilianWord}
-                undercoverWord={config.undercoverWord}
-              />
-            </div>
+          <div className="min-h-0 overflow-y-auto">
+            <PanelSeats state={state} />
           </div>
         </div>
       )}
 
-      <PhaseOverlay item={overlay} />
+      <PhaseOverlay state={overlay} />
 
       {state.result && <GameOverOverlay result={state.result} onPlayAgain={onExit} />}
     </div>

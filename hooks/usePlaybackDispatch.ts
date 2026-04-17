@@ -13,7 +13,10 @@ const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s
 const PAUSE_BETWEEN_MS = 500
 const POST_TURN_LINGER_MS = 3000    // linger on speaker after they finish
 const ERROR_FLASH_MS = 150
-const OVERLAY_PAUSE_MS = 2000       // time to display PhaseOverlay before resuming
+// Overlay animation timing — must match PhaseOverlay / useOverlayTrigger.
+const OVERLAY_CURTAIN_DOWN_UP_MS = 400   // single curtain in/out
+const OVERLAY_ITEM_HOLD_MS = 1500         // text held at full opacity
+const OVERLAY_CROSSFADE_MS = 400          // text-to-text crossfade
 
 const OVERLAY_TRIGGERS = new Set([
   'game-start',
@@ -22,6 +25,21 @@ const OVERLAY_TRIGGERS = new Set([
   'elimination',
   'no-elimination',
 ])
+
+/**
+ * For a batch of `n` consecutive overlay triggers, compute the total time
+ * the curtain is on screen (match useOverlayTrigger + PhaseOverlay):
+ *   curtain-down + n * hold + (n-1) * crossfade + curtain-up
+ */
+function overlayBatchDuration(n: number): number {
+  if (n <= 0) return 0
+  return (
+    OVERLAY_CURTAIN_DOWN_UP_MS +
+    n * OVERLAY_ITEM_HOLD_MS +
+    Math.max(0, n - 1) * OVERLAY_CROSSFADE_MS +
+    OVERLAY_CURTAIN_DOWN_UP_MS
+  )
+}
 
 interface TurnItem {
   kind: 'turn'
@@ -125,9 +143,19 @@ export function usePlaybackDispatch(
         if (item.kind === 'pass') {
           queueRef.current.shift()
           dispatch(item.event)
-          // Pause so the PhaseOverlay has time to play for milestone events.
           if (OVERLAY_TRIGGERS.has(item.event.type)) {
-            await sleep(OVERLAY_PAUSE_MS)
+            // Greedily consume any subsequent overlay triggers into this batch
+            // so the PhaseOverlay plays them under a single curtain.
+            let count = 1
+            while (true) {
+              const next = queueRef.current[0]
+              if (!next || next.kind !== 'pass') break
+              if (!OVERLAY_TRIGGERS.has(next.event.type)) break
+              queueRef.current.shift()
+              dispatch(next.event)
+              count++
+            }
+            await sleep(overlayBatchDuration(count))
             if (abortedRef.current) return
           }
           continue

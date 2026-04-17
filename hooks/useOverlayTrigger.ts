@@ -1,32 +1,52 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import type { GameState } from './useGameReducer'
+import type { ModelSlug, Player, PlayerId } from '@/lib/game/types'
+
+export type OverlayKind = 'text' | 'elimination' | 'round-start'
 
 export interface OverlayItem {
   id: string
+  kind: OverlayKind
   title: string
   subtitle?: string
   accent?: 'civilian' | 'undercover' | null
+  // Elimination only
+  eliminated?: {
+    displayName: string
+    modelSlug: ModelSlug
+    role: 'civilian' | 'undercover'
+  }
+  // Round-start only
+  alive?: Array<{ id: PlayerId; displayName: string; modelSlug: ModelSlug }>
 }
 
-const OVERLAY_DURATION_MS = 2000
-const QUEUE_GAP_MS = 80
+export interface OverlayState {
+  items: OverlayItem[]
+  currentIndex: number
+}
+
+const HOLD_MS = 1500              // time each text is held at full opacity
+const CROSSFADE_MS = 400           // text-to-text crossfade duration
+const ITEM_TOTAL_MS = HOLD_MS + CROSSFADE_MS   // 1900ms per item before advancing
 
 /**
- * Watches game state for milestone transitions (game-start, round-start,
- * phase switches, eliminations) and emits a one-at-a-time overlay item.
- *
- * Multiple transitions that happen within a tick are queued and played in
- * sequence. The playback controller pauses for OVERLAY_DURATION_MS after
- * dispatching the same trigger events so this hook's visual timing stays
- * in sync with the drain loop.
+ * Watches state for milestone transitions and emits a batched overlay:
+ * the curtain drops once, text crossfades between items, curtain rises once.
+ * Multiple triggers fired in quick succession are appended to the same batch.
  */
-export function useOverlayTrigger(state: GameState): OverlayItem | null {
-  const [current, setCurrent] = useState<OverlayItem | null>(null)
-  const queueRef = useRef<OverlayItem[]>([])
-  const busyRef = useRef(false)
+export function useOverlayTrigger(state: GameState): OverlayState | null {
+  const [overlay, setOverlay] = useState<OverlayState | null>(null)
+  const overlayRef = useRef<OverlayState | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const gapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { overlayRef.current = overlay }, [overlay])
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
 
   const prevRef = useRef<{
     phase: GameState['phase']
@@ -37,39 +57,35 @@ export function useOverlayTrigger(state: GameState): OverlayItem | null {
     phase: 'setup', round: 0, historyLen: 0, hasStart: false,
   })
 
-  // Cleanup timers on unmount.
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      if (gapTimerRef.current) clearTimeout(gapTimerRef.current)
-    }
-  }, [])
-
   useEffect(() => {
     const prev = prevRef.current
     const hasStart = state.players.length > 0
     const items: OverlayItem[] = []
 
-    // Game-start (first time players appear).
     if (!prev.hasStart && hasStart) {
       items.push({
         id: `start-${Date.now()}`,
+        kind: 'text',
         title: 'GAME START',
         subtitle: '6 AIs · 1 undercover',
       })
     }
 
-    // Round change.
     if (state.round > 0 && state.round !== prev.round) {
-      const alive = state.players.filter(p => !p.eliminated).length
+      const alive = state.players.filter(p => !p.eliminated)
       items.push({
         id: `round-${state.round}`,
+        kind: 'round-start',
         title: `ROUND ${state.round}`,
-        subtitle: `Alive: ${alive}`,
+        subtitle: `Alive: ${alive.length}`,
+        alive: alive.map((p: Player) => ({
+          id: p.id,
+          displayName: p.displayName,
+          modelSlug: p.modelSlug,
+        })),
       })
     }
 
-    // Phase change (skip setup and over — over has its own GameOverOverlay).
     if (state.phase !== prev.phase && ['describe', 'vote', 'tiebreak'].includes(state.phase)) {
       const titles: Record<string, string> = {
         describe: 'DESCRIBE PHASE',
@@ -78,25 +94,34 @@ export function useOverlayTrigger(state: GameState): OverlayItem | null {
       }
       items.push({
         id: `phase-${state.phase}-${state.round}`,
+        kind: 'text',
         title: titles[state.phase],
       })
     }
 
-    // Elimination / no-elimination (history grew).
     if (state.history.length > prev.historyLen) {
       const latest = state.history[state.history.length - 1]
       if (latest.eliminatedId) {
         const p = state.players.find(pp => pp.id === latest.eliminatedId)
         const role = latest.role
-        items.push({
-          id: `elim-${state.round}-${latest.eliminatedId}`,
-          title: `${(p?.displayName ?? latest.eliminatedId).toUpperCase()} OUT`,
-          subtitle: role ? role.toUpperCase() : undefined,
-          accent: role ?? null,
-        })
+        if (p && role) {
+          items.push({
+            id: `elim-${state.round}-${latest.eliminatedId}`,
+            kind: 'elimination',
+            title: `${p.displayName.toUpperCase()} OUT`,
+            subtitle: role.toUpperCase(),
+            accent: role,
+            eliminated: {
+              displayName: p.displayName,
+              modelSlug: p.modelSlug,
+              role,
+            },
+          })
+        }
       } else {
         items.push({
           id: `noelim-${state.round}-${state.history.length}`,
+          kind: 'text',
           title: 'NO ELIMINATION',
           subtitle: 'Vote was tied',
         })
@@ -104,8 +129,14 @@ export function useOverlayTrigger(state: GameState): OverlayItem | null {
     }
 
     if (items.length > 0) {
-      queueRef.current.push(...items)
-      pump()
+      if (overlayRef.current) {
+        // Append to current batch.
+        setOverlay(prev => prev ? { ...prev, items: [...prev.items, ...items] } : prev)
+      } else {
+        // Start a new batch; schedule advance.
+        setOverlay({ items, currentIndex: 0 })
+        scheduleAdvance()
+      }
     }
 
     prevRef.current = {
@@ -114,25 +145,27 @@ export function useOverlayTrigger(state: GameState): OverlayItem | null {
       historyLen: state.history.length,
       hasStart,
     }
+
   }, [state])
 
-  const pump = () => {
-    if (busyRef.current) return
-    const next = queueRef.current.shift()
-    if (!next) return
-    busyRef.current = true
-    setCurrent(next)
-    timerRef.current = setTimeout(() => {
-      setCurrent(null)
-      timerRef.current = null
-      // Small gap so exit animation plays, then try the next item.
-      gapTimerRef.current = setTimeout(() => {
-        busyRef.current = false
-        gapTimerRef.current = null
-        pump()
-      }, QUEUE_GAP_MS)
-    }, OVERLAY_DURATION_MS)
+  function scheduleAdvance() {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(advance, ITEM_TOTAL_MS)
   }
 
-  return current
+  function advance() {
+    setOverlay(prev => {
+      if (!prev) return null
+      const next = prev.currentIndex + 1
+      if (next >= prev.items.length) {
+        // Curtain goes up.
+        return null
+      }
+      // Schedule next advance.
+      scheduleAdvance()
+      return { ...prev, currentIndex: next }
+    })
+  }
+
+  return overlay
 }

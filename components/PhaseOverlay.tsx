@@ -1,26 +1,26 @@
 'use client'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { OverlayItem } from '@/hooks/useOverlayTrigger'
+import { Avatar } from './Avatar'
+import type { OverlayItem, OverlayState } from '@/hooks/useOverlayTrigger'
 
 interface Props {
-  item: OverlayItem | null
+  state: OverlayState | null
 }
 
 /**
- * Curtain-style full-screen overlay. Two dark bars slide in from top and
- * bottom, meet in the middle, hold with text, then slide back out.
+ * Curtain-style full-screen overlay.
  *
- * Timing (total ~2s):
- *  - 0.0–0.4s: curtains close
- *  - 0.4–1.6s: text held at full opacity
- *  - 1.6–2.0s: curtains open (via AnimatePresence exit)
+ * The curtain drops once at the start of a batch and rises once at the end.
+ * Between items in the batch the text content crossfades (curtain stays down).
  */
-export function PhaseOverlay({ item }: Props) {
+export function PhaseOverlay({ state }: Props) {
+  const item = state ? state.items[state.currentIndex] : null
+
   return (
     <AnimatePresence>
-      {item && (
+      {state && item && (
         <motion.div
-          key={item.id}
+          key="curtain"
           className="fixed inset-0 z-40 pointer-events-none"
         >
           {/* Top curtain */}
@@ -40,36 +40,89 @@ export function PhaseOverlay({ item }: Props) {
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           />
 
-          {/* Text — appears after curtains meet */}
-          <motion.div
-            className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none"
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{
-              opacity: { duration: 0.25, delay: 0.35 },
-              scale: { duration: 0.4, delay: 0.35, ease: [0.34, 1.56, 0.64, 1] },
-            }}
-          >
-            <div className="text-6xl md:text-7xl font-black tracking-[0.12em] text-zinc-50">
-              {item.title}
-            </div>
-            {item.subtitle && (
-              <div
-                className={`mt-4 text-lg tracking-wider ${
-                  item.accent === 'undercover'
-                    ? 'text-red-300 font-bold'
-                    : item.accent === 'civilian'
-                      ? 'text-emerald-300 font-bold'
-                      : 'text-zinc-400'
-                }`}
+          {/* Content — crossfades as currentIndex changes */}
+          <div className="absolute inset-0 flex items-center justify-center px-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{
+                  opacity: { duration: 0.25 },
+                  y: { duration: 0.3, ease: 'easeOut' },
+                }}
+                className="w-full max-w-5xl"
               >
-                {item.subtitle}
-              </div>
-            )}
-          </motion.div>
+                <OverlayContent item={item} />
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+function OverlayContent({ item }: { item: OverlayItem }) {
+  if (item.kind === 'elimination' && item.eliminated) {
+    return (
+      <div className="flex flex-col items-center text-center gap-5">
+        <Avatar modelSlug={item.eliminated.modelSlug} size={180} />
+        <div className="text-5xl md:text-6xl font-black tracking-[0.1em] text-zinc-50">
+          {item.eliminated.displayName.toUpperCase()}
+        </div>
+        <div
+          className={`text-2xl font-bold tracking-[0.2em] ${
+            item.eliminated.role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
+          }`}
+        >
+          ELIMINATED · {item.eliminated.role.toUpperCase()}
+        </div>
+      </div>
+    )
+  }
+
+  if (item.kind === 'round-start' && item.alive) {
+    return (
+      <div className="flex flex-col items-center text-center gap-6">
+        <div className="flex items-end gap-5">
+          {item.alive.map(p => (
+            <div key={p.id} className="flex flex-col items-center gap-2">
+              <Avatar modelSlug={p.modelSlug} size={72} />
+              <div className="text-xs text-zinc-400 font-mono">{p.id}</div>
+            </div>
+          ))}
+        </div>
+        <div className="text-5xl md:text-6xl font-black tracking-[0.12em] text-zinc-50">
+          {item.title}
+        </div>
+        {item.subtitle && (
+          <div className="text-lg tracking-wider text-zinc-400">{item.subtitle}</div>
+        )}
+      </div>
+    )
+  }
+
+  // Default text kind
+  return (
+    <div className="text-center">
+      <div className="text-6xl md:text-7xl font-black tracking-[0.14em] text-zinc-50">
+        {item.title}
+      </div>
+      {item.subtitle && (
+        <div
+          className={`mt-4 text-lg tracking-wider ${
+            item.accent === 'undercover'
+              ? 'text-red-300 font-bold'
+              : item.accent === 'civilian'
+                ? 'text-emerald-300 font-bold'
+                : 'text-zinc-400'
+          }`}
+        >
+          {item.subtitle}
+        </div>
+      )}
+    </div>
   )
 }
