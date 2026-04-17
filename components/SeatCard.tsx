@@ -48,9 +48,12 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
         )}
       </div>
 
-      {/* Desk: taller, name + word + role icon */}
-      <div className={`w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-center min-h-[110px] flex flex-col justify-between ${eliminated ? 'opacity-40' : ''}`}>
-        <div className="text-xs text-zinc-400 truncate">{player.displayName}</div>
+      {/* Desk: taller, name + word + role icon + p-id badge */}
+      <div className={`relative w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-center min-h-[110px] flex flex-col justify-between ${eliminated ? 'opacity-40' : ''}`}>
+        <span className="absolute top-1.5 left-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5">
+          {player.id}
+        </span>
+        <div className="text-xs text-zinc-400 truncate pt-3">{player.displayName}</div>
         <div className={`text-xl font-bold truncate my-2 ${roleAccent}`}>{player.word}</div>
         <div className="flex items-center justify-center">
           <RoleIcon weight="fill" size={16} className={roleIconColor} />

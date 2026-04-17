@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef } from 'react'
-import type { GameEvent, ModelSlug, PlayerId } from '@/lib/game/types'
+import type { GameEvent, ModelSlug, Player, PlayerId } from '@/lib/game/types'
+import { detectTextLanguage } from '@/lib/voices'
 
 /**
  * Animation pacing for "human-like" playback.
@@ -20,7 +21,15 @@ interface TurnItem {
   startEvent: GameEvent
   think: string
   speak: string
+  voteTargetId: PlayerId | null
   end: GameEvent | null
+}
+
+function voteAnnouncement(word: string, targetName: string): string {
+  const lang = detectTextLanguage(word)
+  if (lang === 'zh') return `我投票给 ${targetName}。`
+  if (lang === 'ja') return `${targetName} に投票します。`
+  return `I vote for ${targetName}.`
 }
 
 interface PassItem {
@@ -54,6 +63,7 @@ export function usePlaybackDispatch(
   const runningRef = useRef(false)
   const abortedRef = useRef(false)
   const slugsRef = useRef<Map<PlayerId, ModelSlug>>(new Map())
+  const playersRef = useRef<Map<PlayerId, Player>>(new Map())
   // Keep `speak` in a ref so the stable `drain` closure always calls the
   // latest callback (which captures the latest enabled/voices state).
   const speakRef = useRef<SpeakFn | undefined>(speak)
@@ -141,6 +151,15 @@ export function usePlaybackDispatch(
             speakText(item.speak, item.playerId),
           ])
           if (abortedRef.current) return
+        } else if (item.phase === 'vote' && item.voteTargetId) {
+          // Announce the vote verbally: "I vote for X." in the voter's language.
+          const voter = playersRef.current.get(item.playerId)
+          const target = playersRef.current.get(item.voteTargetId)
+          if (voter && target) {
+            const line = voteAnnouncement(voter.word, target.displayName)
+            await speakText(line, item.playerId)
+            if (abortedRef.current) return
+          }
         }
 
         await sleep(POST_TURN_LINGER_MS)
@@ -167,8 +186,9 @@ export function usePlaybackDispatch(
 
       switch (e.type) {
         case 'game-start': {
-          // Cache model slugs so TTS can resolve voices by playerId.
+          // Cache player info so TTS can resolve voices and display names by id.
           slugsRef.current = new Map(e.players.map(p => [p.id, p.modelSlug]))
+          playersRef.current = new Map(e.players.map(p => [p.id, p]))
           queue.push({ kind: 'pass', event: e })
           break
         }
@@ -180,6 +200,7 @@ export function usePlaybackDispatch(
             startEvent: e,
             think: '',
             speak: '',
+            voteTargetId: null,
             end: null,
           })
           break
@@ -191,6 +212,7 @@ export function usePlaybackDispatch(
             startEvent: e,
             think: '',
             speak: '',
+            voteTargetId: null,
             end: null,
           })
           break
@@ -215,6 +237,7 @@ export function usePlaybackDispatch(
             // Vote reasoning is delivered atomically in vote.reasoning — inject
             // it as the think content so the animation can type it out.
             turn.think = e.vote.reasoning
+            turn.voteTargetId = e.vote.targetId
             turn.end = e
           }
           break

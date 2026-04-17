@@ -89,17 +89,31 @@ export function useSpeech(): SpeechController {
       const ctrl = new AbortController()
       abortRef.current = ctrl
 
-      let blob: Blob
-      try {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, voice }),
-          signal: ctrl.signal,
-        })
-        if (!res.ok) return
-        blob = await res.blob()
-      } catch {
+      // Fetch MP3 with one retry to smooth over transient Edge TTS hiccups.
+      const fetchAudio = async (): Promise<Blob | null> => {
+        try {
+          const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voice }),
+            signal: ctrl.signal,
+          })
+          if (!res.ok) return null
+          return await res.blob()
+        } catch {
+          return null
+        }
+      }
+      let blob = await fetchAudio()
+      if (!blob && !ctrl.signal.aborted) {
+        await new Promise(r => setTimeout(r, 300))
+        blob = await fetchAudio()
+      }
+      if (!blob) {
+        // Fallback: hold the turn for a duration proportional to text length
+        // so the player doesn't lose their beat when TTS fails.
+        const fallbackMs = Math.min(6000, Math.max(1500, text.length * 60))
+        await new Promise(r => setTimeout(r, fallbackMs))
         return
       }
 

@@ -105,7 +105,14 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       return { ...state, currentSpeaker: null }
 
     case 'vote-start':
-      return { ...state, currentSpeaker: event.playerId }
+      return {
+        ...state,
+        currentSpeaker: event.playerId,
+        reasoningByPlayer: {
+          ...state.reasoningByPlayer,
+          [event.playerId]: '',
+        },
+      }
 
     case 'vote-cast':
       return {
