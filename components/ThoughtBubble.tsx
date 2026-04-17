@@ -17,7 +17,7 @@ export function ThoughtBubble({ text, targetModelSlug, active, size = 'sm' }: Pr
   const isAvatar = !!targetModelSlug
   const padding = isAvatar
     ? (isLarge ? 'p-2' : 'p-1.5')
-    : (isLarge ? 'px-4 py-3 text-base max-w-md' : 'px-2 py-1 text-xs max-w-[140px]')
+    : (isLarge ? 'px-5 py-3 text-xl max-w-md font-medium' : 'px-3 py-2 text-sm max-w-[180px] font-medium')
   const bubble = `relative bg-white text-zinc-900 rounded-2xl border border-zinc-300 ${padding}`
 
   return (

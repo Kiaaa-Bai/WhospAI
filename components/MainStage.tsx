@@ -86,10 +86,10 @@ export function MainStage({ state }: Props) {
             </div>
             <div className={`shrink-0 text-5xl font-bold mb-4 ${roleAccent}`}>{focus.word}</div>
 
-            <div className="flex-1 min-h-0 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-left text-sm text-zinc-300 whitespace-pre-wrap break-words overflow-y-auto">
+            <div className="flex-1 min-h-0 bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words overflow-y-auto">
               {reasoning || (
                 <span className="italic text-zinc-500 flex items-center gap-1.5">
-                  <Brain weight="fill" size={14} /> thinking…
+                  <Brain weight="fill" size={16} /> thinking…
                 </span>
               )}
             </div>
