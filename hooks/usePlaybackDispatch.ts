@@ -7,9 +7,10 @@ import type { GameEvent, PlayerId } from '@/lib/game/types'
  * Server events are buffered per-turn and replayed at these speeds,
  * decoupling the user-visible pace from the LLM generation pace.
  */
-const REASONING_MS_PER_CHAR = 25    // 40 chars/s
-const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s — slower for memorability
+const REASONING_MS_PER_CHAR = 40    // 25 chars/s (unified with statement)
+const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s
 const PAUSE_BETWEEN_MS = 500
+const POST_TURN_LINGER_MS = 3000    // linger on speaker after they finish
 const ERROR_FLASH_MS = 150
 
 interface TurnItem {
@@ -115,6 +116,12 @@ export function usePlaybackDispatch(
             await sleep(STATEMENT_MS_PER_CHAR)
           }
         }
+
+        // Linger on the speaker so viewers can read the full output before
+        // the focus jumps to the next model. Keep currentSpeaker set during
+        // this pause by delaying the speak-end / vote-cast dispatch.
+        await sleep(POST_TURN_LINGER_MS)
+        if (abortedRef.current) return
 
         dispatch(item.end)
         queueRef.current.shift()
