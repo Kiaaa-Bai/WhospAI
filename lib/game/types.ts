@@ -6,7 +6,7 @@ export type ModelSlug =
   | 'google/gemini-2.5-flash-lite'
   | 'deepseek/deepseek-v3'
   | 'xai/grok-4.1-fast-non-reasoning'
-  | 'alibaba/qwen3.5-flash'
+  | 'alibaba/qwen3-max'
 
 export type Role = 'civilian' | 'undercover'
 
