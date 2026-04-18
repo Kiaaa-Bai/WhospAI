@@ -4,7 +4,6 @@ import {
   Trophy, Detective, Shield, Skull, ArrowClockwise, PencilSimple,
   FilmSlate, Scales,
 } from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
 import { Avatar } from './Avatar'
 import type { GameResult, GameConfig } from '@/lib/game/types'
 import type { GameState } from '@/hooks/useGameReducer'
@@ -20,9 +19,7 @@ interface Props {
 export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
   const civiliansWon = result.winner === 'civilians'
   const winnerColor = civiliansWon ? 'text-emerald-300' : 'text-red-300'
-  const winnerBg = civiliansWon
-    ? 'from-emerald-950/40 via-zinc-950 to-zinc-950'
-    : 'from-red-950/40 via-zinc-950 to-zinc-950'
+  const winnerAccent = civiliansWon ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'
 
   const displayName = (slug: string) =>
     ROSTER.find(r => r.modelSlug === slug)?.displayName ?? slug
@@ -33,9 +30,11 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className={`fixed inset-0 z-50 bg-gradient-to-b ${winnerBg} text-zinc-100 overflow-y-auto`}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-50 bg-zinc-950 text-zinc-100 overflow-y-auto"
     >
+      {/* Subtle colored accent stripe at the very top */}
+      <div className={`h-1 w-full ${civiliansWon ? 'bg-emerald-400' : 'bg-red-400'}`} />
       <div className="min-h-full flex flex-col">
         {/* Banner */}
         <motion.div
@@ -199,23 +198,20 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
           transition={{ delay: 0.8 }}
           className="shrink-0 px-8 py-8 border-t border-zinc-800 flex items-center justify-center gap-4 flex-wrap"
         >
-          <Button
-            className="h-14 px-8 text-base tracking-[0.2em] font-bold"
-            size="lg"
+          <button
             onClick={onPlayAgain}
+            className="h-14 px-10 flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-base tracking-[0.2em] transition-colors shadow-lg shadow-amber-500/20"
           >
-            <ArrowClockwise weight="fill" size={18} className="mr-2" />
+            <ArrowClockwise weight="fill" size={18} />
             PLAY AGAIN
-          </Button>
-          <Button
-            className="h-14 px-8 text-base tracking-[0.2em] font-bold"
-            variant="outline"
-            size="lg"
+          </button>
+          <button
             onClick={onPlayAgain}
+            className="h-14 px-10 flex items-center gap-2 rounded-lg bg-zinc-900 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-100 font-bold text-base tracking-[0.2em] transition-colors"
           >
-            <PencilSimple weight="fill" size={18} className="mr-2" />
+            <PencilSimple weight="fill" size={18} />
             CHANGE WORDS
-          </Button>
+          </button>
         </motion.div>
       </div>
     </motion.div>

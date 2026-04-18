@@ -11,7 +11,18 @@ import { ROSTER } from '@/lib/game/roster'
 import { WORD_PAIRS } from '@/data/word-pairs'
 import type { GameConfig } from '@/lib/game/types'
 
-type Lang = 'en' | 'zh'
+type Lang = 'en' | 'zh' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'ru'
+
+const LANGUAGES: Array<{ code: Lang; label: string; placeholderCivilian: string; placeholderUndercover: string }> = [
+  { code: 'en', label: 'EN', placeholderCivilian: 'apple',  placeholderUndercover: 'pear' },
+  { code: 'zh', label: '中',  placeholderCivilian: '苹果',   placeholderUndercover: '梨' },
+  { code: 'ja', label: '日',  placeholderCivilian: 'りんご', placeholderUndercover: '梨' },
+  { code: 'ko', label: '한',  placeholderCivilian: '사과',   placeholderUndercover: '배' },
+  { code: 'es', label: 'ES', placeholderCivilian: 'manzana', placeholderUndercover: 'pera' },
+  { code: 'fr', label: 'FR', placeholderCivilian: 'pomme',  placeholderUndercover: 'poire' },
+  { code: 'de', label: 'DE', placeholderCivilian: 'Apfel',  placeholderUndercover: 'Birne' },
+  { code: 'ru', label: 'RU', placeholderCivilian: 'яблоко', placeholderUndercover: 'груша' },
+]
 
 export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void }) {
   const [civilianWord, setCivilianWord] = useState('')
@@ -79,7 +90,7 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
               <Input
                 value={civilianWord}
                 onChange={e => setCivilianWord(e.target.value)}
-                placeholder={lang === 'zh' ? '苹果' : 'apple'}
+                placeholder={LANGUAGES.find(l => l.code === lang)!.placeholderCivilian}
                 maxLength={30}
                 className="text-lg"
               />
@@ -95,7 +106,7 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
               <Input
                 value={undercoverWord}
                 onChange={e => setUndercoverWord(e.target.value)}
-                placeholder={lang === 'zh' ? '梨' : 'pear'}
+                placeholder={LANGUAGES.find(l => l.code === lang)!.placeholderUndercover}
                 maxLength={30}
                 className="text-lg"
               />
@@ -110,7 +121,7 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                 text="Let AI Pick"
                 compact
               />
-              <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded p-0.5 ml-3">
+              <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 rounded p-0.5 ml-3 flex-wrap">
                 <LangToggle value={lang} onChange={setLang} />
               </div>
             </div>
@@ -249,15 +260,15 @@ function SectionHeader({
 function LangToggle({ value, onChange }: { value: Lang; onChange: (v: Lang) => void }) {
   return (
     <>
-      {(['en', 'zh'] as Lang[]).map(l => (
+      {LANGUAGES.map(l => (
         <button
-          key={l}
-          onClick={() => onChange(l)}
+          key={l.code}
+          onClick={() => onChange(l.code)}
           className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors ${
-            value === l ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+            value === l.code ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          {l}
+          {l.label}
         </button>
       ))}
     </>

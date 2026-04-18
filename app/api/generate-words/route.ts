@@ -6,20 +6,62 @@ export const runtime = 'nodejs'
 export const maxDuration = 30
 
 const RequestSchema = z.object({
-  language: z.enum(['en', 'zh']),
+  language: z.enum(['en', 'zh', 'ja', 'ko', 'es', 'fr', 'de', 'ru']),
 })
+
+const LANGUAGE_INFO: Record<
+  z.infer<typeof RequestSchema>['language'],
+  { name: string; rule: string; examples: string }
+> = {
+  en: {
+    name: 'English',
+    rule: 'Both words MUST be written in English.',
+    examples: 'apple / pear · piano / guitar · subway / train · dolphin / shark',
+  },
+  zh: {
+    name: 'Chinese',
+    rule: 'Both words MUST be written in Chinese characters.',
+    examples: '苹果 / 梨 · 钢琴 / 吉他 · 地铁 / 火车 · 海豚 / 鲨鱼',
+  },
+  ja: {
+    name: 'Japanese',
+    rule: 'Both words MUST be written in Japanese (hiragana, katakana, or kanji as natural).',
+    examples: 'りんご / 梨 · ピアノ / ギター · 地下鉄 / 電車 · イルカ / サメ',
+  },
+  ko: {
+    name: 'Korean',
+    rule: 'Both words MUST be written in Korean Hangul.',
+    examples: '사과 / 배 · 피아노 / 기타 · 지하철 / 기차 · 돌고래 / 상어',
+  },
+  es: {
+    name: 'Spanish',
+    rule: 'Both words MUST be written in Spanish.',
+    examples: 'manzana / pera · piano / guitarra · metro / tren · delfín / tiburón',
+  },
+  fr: {
+    name: 'French',
+    rule: 'Both words MUST be written in French.',
+    examples: 'pomme / poire · piano / guitare · métro / train · dauphin / requin',
+  },
+  de: {
+    name: 'German',
+    rule: 'Both words MUST be written in German.',
+    examples: 'Apfel / Birne · Klavier / Gitarre · U-Bahn / Zug · Delfin / Hai',
+  },
+  ru: {
+    name: 'Russian',
+    rule: 'Both words MUST be written in Russian (Cyrillic).',
+    examples: 'яблоко / груша · пианино / гитара · метро / поезд · дельфин / акула',
+  },
+}
 
 const WordPairSchema = z.object({
   civilian: z.string().min(1).max(30),
   undercover: z.string().min(1).max(30),
 })
 
-function buildPrompt(language: 'en' | 'zh'): string {
-  const langLabel = language === 'zh' ? 'Chinese' : 'English'
-  const langRule =
-    language === 'zh'
-      ? 'Both words MUST be written in Chinese characters.'
-      : 'Both words MUST be written in English.'
+function buildPrompt(language: z.infer<typeof RequestSchema>['language']): string {
+  const info = LANGUAGE_INFO[language]
 
   return `Generate a word pair for the social deduction game "Who is the Spy".
 
@@ -31,14 +73,13 @@ RULES:
 - They must be RELATED but DISTINCT — similar enough that players might
   confuse them during descriptions, but different enough that careful
   listening can tell them apart.
-- Good examples (en): apple / pear · piano / guitar · subway / train · dolphin / shark
-- Good examples (zh): 苹果 / 梨 · 钢琴 / 吉他 · 地铁 / 火车 · 海豚 / 鲨鱼
+- Good examples (${info.name}): ${info.examples}
 - NEVER pick two synonyms or identical words.
 - Each word must be 1–8 characters.
-- Language: ${langLabel}. ${langRule}
+- Language: ${info.name}. ${info.rule}
 
 Output JSON with exactly the two words. Pick something unexpected — avoid
-cliché pairs like apple/banana. Be creative but keep it recognizable.`
+cliché pairs. Be creative but keep it recognizable.`
 }
 
 export async function POST(req: Request) {
