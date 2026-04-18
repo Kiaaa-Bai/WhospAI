@@ -16,11 +16,11 @@ function BucketGroup({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className={`text-sm font-bold tracking-[0.18em] uppercase ${labelClass}`}>
+    <div className="flex flex-col items-center gap-2.5">
+      <div className={`text-base font-bold tracking-[0.18em] uppercase ${labelClass}`}>
         {label}
       </div>
-      <div className="flex items-center gap-2">{children}</div>
+      <div className="flex items-center gap-3">{children}</div>
     </div>
   )
 }
@@ -28,7 +28,7 @@ function BucketGroup({
 type BucketVariant = 'now' | 'next' | 'done' | 'skipped' | 'out'
 
 function BucketAvatar({ player, variant }: { player: Player; variant: BucketVariant }) {
-  const size = variant === 'now' ? 56 : 44
+  const size = variant === 'now' ? 80 : 64
   const ringClass = variant === 'now'
     ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full'
     : ''
@@ -47,13 +47,13 @@ function BucketAvatar({ player, variant }: { player: Player; variant: BucketVari
         <Avatar modelSlug={player.modelSlug} size={size} className={imgClass} />
       </div>
       {variant === 'out' && (
-        <span className="absolute inset-0 flex items-center justify-center pointer-events-none text-red-500 text-3xl font-bold">
+        <span className="absolute inset-0 flex items-center justify-center pointer-events-none text-red-500 text-5xl font-bold">
           ✕
         </span>
       )}
       {variant === 'skipped' && (
         <span className="absolute -bottom-1 -right-1 bg-zinc-900 rounded-full p-1 border border-zinc-700">
-          <HourglassMedium weight="fill" size={14} className="text-amber-500 block" />
+          <HourglassMedium weight="fill" size={16} className="text-amber-500 block" />
         </span>
       )}
     </motion.div>
@@ -185,9 +185,8 @@ export function MainStage({ state }: Props) {
         </div>
         <div className={`shrink-0 text-3xl font-bold mb-3 ${roleAccent}`}>{focus.word}</div>
 
-        {/* Reasoning — shrunk to leave room for the order strip below.
-            Long reasoning scrolls within the cap. */}
-        <div className="shrink-0 max-h-32 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
+        {/* Reasoning — fixed 200px so the layout below is stable. */}
+        <div className="shrink-0 h-[200px] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
           {reasoning || (
             <span className="italic text-zinc-500 flex items-center gap-1.5">
               <Brain weight="fill" size={16} /> thinking…
@@ -195,12 +194,11 @@ export function MainStage({ state }: Props) {
           )}
         </div>
 
-        {/* Speaking order panel — same width and styling as reasoning above
-            so the two read as a stacked pair. Bigger avatars + bigger
-            section labels per latest design. */}
-        <div className="flex-1 min-h-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex items-center justify-center overflow-y-auto">
+        {/* Speaking order — borderless, divider line on top, large
+            centered row spanning the desk's width. */}
+        <div className="flex-1 min-h-0 mt-4 pt-4 border-t border-zinc-800 flex items-center justify-center overflow-y-auto">
           <LayoutGroup id="speaking-order">
-            <div className="flex items-end justify-center gap-5 flex-wrap">
+            <div className="flex items-end justify-center gap-8 flex-wrap">
               {buckets.now && (
                 <BucketGroup label="NOW" labelClass="text-amber-400">
                   {[buckets.now].map(p => (
