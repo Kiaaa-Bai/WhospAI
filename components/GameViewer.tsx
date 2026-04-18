@@ -2,7 +2,6 @@
 import { useEffect } from 'react'
 import {
   XCircle, Users, Skull, FilmSlate, SpeakerHigh, SpeakerSlash,
-  Shield, Detective,
 } from '@phosphor-icons/react'
 import { useGameSSE } from '@/hooks/useGameSSE'
 import { useGameReducer } from '@/hooks/useGameReducer'
@@ -86,58 +85,6 @@ export function GameViewer({
           </div>
         </div>
 
-        {/* Row 2: word pair + eliminations */}
-        {inGame && (
-          <div className="flex items-center gap-6 px-6 py-2 bg-zinc-950/60 border-t border-zinc-900 overflow-x-auto">
-            <div className="flex items-center gap-2 shrink-0">
-              <Shield weight="fill" size={14} className="text-emerald-400" />
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Civilian</span>
-              <span className="text-sm text-emerald-300 font-bold">{config.civilianWord}</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Detective weight="fill" size={14} className="text-red-400" />
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Undercover</span>
-              <span className="text-sm text-red-300 font-bold">{config.undercoverWord}</span>
-            </div>
-
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Skull weight="fill" size={14} className="text-zinc-500 shrink-0" />
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500 shrink-0">
-                Eliminations
-              </span>
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {state.history.length === 0 ? (
-                  <span className="text-xs text-zinc-600 italic">none yet</span>
-                ) : (
-                  state.history.map((h, i) => {
-                    if (!h.eliminatedId) {
-                      return (
-                        <span
-                          key={i}
-                          className="text-[11px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500 shrink-0"
-                        >
-                          R{h.round}: tied
-                        </span>
-                      )
-                    }
-                    const p = state.players.find(pp => pp.id === h.eliminatedId)
-                    const color = h.role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
-                    return (
-                      <span
-                        key={i}
-                        className="text-[11px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 shrink-0 flex items-center gap-1"
-                      >
-                        <span className="text-zinc-600 font-mono">R{h.round}</span>
-                        <span className="font-medium">{p?.displayName ?? h.eliminatedId}</span>
-                        <span className={color}>· {h.role}</span>
-                      </span>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </header>
 
       {error && (

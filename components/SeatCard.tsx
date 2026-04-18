@@ -26,15 +26,20 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
       layout
       className="flex flex-col items-center gap-2 w-full relative"
     >
-      {/* Bubble above head — compact; grows downward when content wraps */}
-      <div className="min-h-[56px] flex items-end justify-center w-full">
-        {showBubble && !eliminated && (
+      {/* Bubble above head — fixed 80px height, always present (empty for
+          eliminated). Text auto-shrinks via ThoughtBubble. */}
+      <div className="flex items-end justify-center w-full">
+        {!eliminated ? (
           <ThoughtBubble
             text={currentSpeech}
             targetModelSlug={phase === 'vote' && voteTarget ? voteTarget : undefined}
             active={isActive && phase !== 'vote'}
+            ellipsis={!showBubble}
             size="sm"
+            fullWidth
           />
+        ) : (
+          <div className="h-20 w-full" />
         )}
       </div>
 

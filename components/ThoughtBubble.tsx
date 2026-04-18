@@ -6,81 +6,114 @@ import type { ModelSlug } from '@/lib/game/types'
 interface Props {
   text?: string
   targetModelSlug?: ModelSlug
-  active?: boolean
+  active?: boolean              // typewriter cursor
+  ellipsis?: boolean            // show animated "…" instead of text
   size?: 'sm' | 'lg' | 'xl'
-  /** When true the bubble stretches to its container's width. */
+  /** When true the bubble fills its container's width. */
   fullWidth?: boolean
 }
 
 /**
- * Returns a Tailwind text-size class sized down as `text` gets longer so
- * the MainStage bubble stays legible whether it's a 3-word quip or a full
- * paragraph.
+ * Picks a Tailwind text-size class so longer statements still fit a
+ * fixed-height bubble.
  */
-function autoTextSize(text: string): string {
+function autoTextSize(text: string, size: 'sm' | 'lg' | 'xl'): string {
   const len = text.length
-  if (len <= 30) return 'text-5xl'
-  if (len <= 60) return 'text-4xl'
-  if (len <= 120) return 'text-3xl'
-  if (len <= 220) return 'text-2xl'
-  return 'text-xl'
+  if (size === 'xl') {
+    if (len <= 30) return 'text-5xl'
+    if (len <= 60) return 'text-4xl'
+    if (len <= 120) return 'text-3xl'
+    if (len <= 220) return 'text-2xl'
+    if (len <= 360) return 'text-xl'
+    return 'text-lg'
+  }
+  if (size === 'lg') {
+    if (len <= 30) return 'text-2xl'
+    if (len <= 80) return 'text-xl'
+    return 'text-lg'
+  }
+  // sm
+  if (len <= 24) return 'text-base'
+  if (len <= 60) return 'text-sm'
+  return 'text-xs'
+}
+
+function bubbleHeight(size: 'sm' | 'lg' | 'xl'): string {
+  if (size === 'xl') return 'h-60'   // 240px
+  if (size === 'lg') return 'h-32'   // 128px
+  return 'h-20'                       // 80px
+}
+
+function Ellipsis({ size }: { size: 'sm' | 'lg' | 'xl' }) {
+  const dotSize = size === 'xl' ? 'w-3 h-3' : size === 'lg' ? 'w-2 h-2' : 'w-1.5 h-1.5'
+  const gap = size === 'xl' ? 'gap-3' : 'gap-1.5'
+  return (
+    <div className={`flex items-center justify-center ${gap}`}>
+      {[0, 1, 2].map(i => (
+        <motion.span
+          key={i}
+          className={`${dotSize} rounded-full bg-zinc-500`}
+          animate={{ opacity: [0.2, 1, 0.2] }}
+          transition={{
+            duration: 1.2,
+            repeat: Infinity,
+            delay: i * 0.2,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  )
 }
 
 export function ThoughtBubble({
   text,
   targetModelSlug,
   active,
+  ellipsis,
   size = 'sm',
   fullWidth = false,
 }: Props) {
-  if (!text && !targetModelSlug && !active) return null
-
   const isAvatar = !!targetModelSlug
-  const isXL = size === 'xl'
-  const isLarge = size === 'lg'
+  const showEllipsis = ellipsis && !isAvatar && !text
 
-  let padding: string
+  // Compute padding + text size — always render the bubble shell so
+  // height stays fixed across content changes.
   let textSize = ''
+  let padding: string
   if (isAvatar) {
-    padding = isXL ? 'p-3' : isLarge ? 'p-2' : 'p-1.5'
-  } else if (isXL) {
-    textSize = autoTextSize(text ?? '')
-    padding = `px-8 py-6 ${textSize} font-semibold leading-snug text-center`
-  } else if (isLarge) {
-    padding = 'px-5 py-3 text-xl max-w-md font-medium'
+    padding = size === 'xl' ? 'p-3' : size === 'lg' ? 'p-2' : 'p-1.5'
+  } else if (showEllipsis) {
+    padding = ''
   } else {
-    padding = 'px-3 py-2 text-sm max-w-[180px] font-medium'
+    textSize = autoTextSize(text ?? '', size)
+    padding =
+      size === 'xl'
+        ? `px-8 py-4 ${textSize} font-semibold leading-snug text-center`
+        : size === 'lg'
+          ? `px-5 py-3 ${textSize} font-medium`
+          : `px-3 py-2 ${textSize} font-medium leading-tight`
   }
 
-  const widthClass = fullWidth
-    ? 'w-full'
-    : isXL
-      ? 'max-w-3xl'
-      : ''
+  const widthClass = fullWidth ? 'w-full' : size === 'xl' ? 'max-w-3xl' : ''
+  const height = bubbleHeight(size)
+  const bubble =
+    `relative flex items-center justify-center bg-white text-zinc-900 ` +
+    `rounded-2xl border border-zinc-300 overflow-hidden ${padding} ${widthClass} ${height}`
 
-  const bubble = `relative bg-white text-zinc-900 rounded-2xl border border-zinc-300 ${padding} ${widthClass}`
-
-  const avatarSize = isXL ? 84 : isLarge ? 56 : 32
-  const cursorClass = isXL
-    ? 'w-1.5 h-10'
-    : isLarge
-      ? 'w-1 h-5'
-      : 'w-0.5 h-3'
+  const avatarSize = size === 'xl' ? 96 : size === 'lg' ? 56 : 32
+  const cursorClass = size === 'xl' ? 'w-1.5 h-10' : size === 'lg' ? 'w-1 h-5' : 'w-0.5 h-3'
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      className={bubble}
-    >
-      {targetModelSlug ? (
-        <div className="flex items-center justify-center">
-          <Avatar modelSlug={targetModelSlug} size={avatarSize} />
-        </div>
+    <div className={bubble}>
+      {isAvatar ? (
+        <Avatar modelSlug={targetModelSlug!} size={avatarSize} />
+      ) : showEllipsis ? (
+        <Ellipsis size={size} />
       ) : (
-        <span className="whitespace-pre-wrap break-words">{text}</span>
+        <span className="whitespace-pre-wrap break-words text-center">{text}</span>
       )}
-      {active && (
+      {active && !isAvatar && !showEllipsis && (
         <motion.span
           className={`inline-block align-middle bg-zinc-500 ml-0.5 ${cursorClass}`}
           animate={{ opacity: [1, 0, 1] }}
@@ -88,6 +121,6 @@ export function ThoughtBubble({
         />
       )}
       <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-white border-r border-b border-zinc-300 rotate-45" />
-    </motion.div>
+    </div>
   )
 }

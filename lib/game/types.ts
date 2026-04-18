@@ -30,6 +30,8 @@ export interface Statement {
   playerId: PlayerId
   round: number
   text: string
+  /** True when emitted during a tiebreak re-describe (vs the round's first describe). */
+  tiebreak?: boolean
 }
 
 export interface Vote {
@@ -37,6 +39,8 @@ export interface Vote {
   targetId: PlayerId | null
   round: number
   reasoning: string
+  /** True when this vote was cast in a tiebreak revote. */
+  tiebreak?: boolean
 }
 
 export interface GameConfig {

@@ -6,8 +6,8 @@ import { buildSystemPrompt, buildDescribePrompt, buildVotePrompt } from './promp
 import { resolveVotes } from './scoring'
 import type { VoteResolution } from './scoring'
 
-const DESCRIBE_TIMEOUT_MS = 20_000
-const VOTE_TIMEOUT_MS = 15_000
+const DESCRIBE_TIMEOUT_MS = 12_000
+const VOTE_TIMEOUT_MS = 10_000
 const RATE_LIMIT_BACKOFF_MS = 3_000
 
 function isRateLimitError(err: unknown): boolean {
@@ -24,6 +24,7 @@ export async function runDescribe(
   ctx: RoundContext,
   emit: Emit,
   llm: LLM,
+  opts?: { tiebreak?: boolean },
 ): Promise<Statement | null> {
   emit({ type: 'speak-start', playerId: player.id })
 
@@ -50,6 +51,7 @@ export async function runDescribe(
       playerId: player.id,
       round: ctx.round,
       text: out.statement,
+      ...(opts?.tiebreak ? { tiebreak: true } : {}),
     }
     emit({ type: 'speak-end', statement, reasoning: out.summary })
     return statement
@@ -75,6 +77,7 @@ export async function runVote(
   ctx: RoundContext,
   emit: Emit,
   llm: LLM,
+  opts?: { tiebreak?: boolean },
 ): Promise<Vote | null> {
   emit({ type: 'vote-start', playerId: voter.id })
 
@@ -83,6 +86,7 @@ export async function runVote(
   const aliveIds = new Set(
     ctx.players.filter(p => !p.eliminated && p.id !== voter.id).map(p => p.id),
   )
+  const tiebreakField = opts?.tiebreak ? { tiebreak: true as const } : {}
 
   const attempt = async (): Promise<Vote> => {
     const out = await llm.vote({
@@ -100,6 +104,7 @@ export async function runVote(
       targetId: validTarget,
       round: ctx.round,
       reasoning: out.summary,
+      ...tiebreakField,
     }
   }
 
@@ -119,6 +124,7 @@ export async function runVote(
         targetId: null,
         round: ctx.round,
         reasoning: `(failed: ${String(err)})`,
+        ...tiebreakField,
       }
     }
   }
@@ -148,7 +154,7 @@ export async function runTiebreak(
 
   // tied players give one more statement
   for (const p of tiedPlayers) {
-    const stmt = await runDescribe(p, ctx, emit, llm)
+    const stmt = await runDescribe(p, ctx, emit, llm, { tiebreak: true })
     if (stmt) ctx.statements.push(stmt)
   }
 
@@ -163,7 +169,7 @@ export async function runTiebreak(
         tiedIds.includes(p.id) || p.id === voter.id ? p : { ...p, eliminated: true }
       ),
     }
-    const vote = await runVote(voter, restrictedCtx, emit, llm)
+    const vote = await runVote(voter, restrictedCtx, emit, llm, { tiebreak: true })
     if (vote) votes.push(vote)
   }
 

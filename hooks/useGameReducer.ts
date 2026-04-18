@@ -62,11 +62,18 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       return { ...state, phase: event.phase }
 
     case 'speak-start':
+      // Clear both reasoning AND currentSpeech for this player so a tiebreak
+      // re-describe doesn't append onto the previous round's text in either
+      // the bubble or the inner-thoughts area.
       return {
         ...state,
         currentSpeaker: event.playerId,
         reasoningByPlayer: {
           ...state.reasoningByPlayer,
+          [event.playerId]: '',
+        },
+        currentSpeech: {
+          ...state.currentSpeech,
           [event.playerId]: '',
         },
       }
