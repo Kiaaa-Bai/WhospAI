@@ -52,7 +52,8 @@ function Ellipsis({ size }: { size: 'sm' | 'lg' | 'xl' }) {
       {[0, 1, 2].map(i => (
         <motion.span
           key={i}
-          className={`${dotSize} rounded-full bg-zinc-500`}
+          className={`${dotSize} rounded-full`}
+          style={{ background: 'var(--reigns-ink-faint)' }}
           animate={{ opacity: [0.2, 1, 0.2] }}
           transition={{
             duration: 1.2,
@@ -97,17 +98,22 @@ export function ThoughtBubble({
 
   const widthClass = fullWidth ? 'w-full' : size === 'xl' ? 'max-w-3xl' : ''
   const height = bubbleHeight(size)
-  // No overflow-hidden on the shell so the bottom triangle (positioned
-  // outside the shell) isn't clipped. autoTextSize keeps content fitting.
   const bubble =
-    `relative flex items-center justify-center bg-white text-zinc-900 ` +
-    `rounded-2xl border border-zinc-300 ${padding} ${widthClass} ${height}`
+    `relative flex items-center justify-center rounded-2xl ${padding} ${widthClass} ${height}`
 
   const avatarSize = size === 'xl' ? 96 : size === 'lg' ? 56 : 32
   const cursorClass = size === 'xl' ? 'w-1.5 h-10' : size === 'lg' ? 'w-1 h-5' : 'w-0.5 h-3'
 
   return (
-    <div className={bubble}>
+    <div
+      className={bubble}
+      style={{
+        background: '#FAF2DF',
+        border: '2px solid var(--reigns-ink)',
+        color: 'var(--reigns-ink)',
+        boxShadow: '3px 3px 0 0 var(--reigns-ink)',
+      }}
+    >
       {isAvatar ? (
         <Avatar modelSlug={targetModelSlug!} size={avatarSize} />
       ) : showEllipsis ? (
@@ -124,13 +130,18 @@ export function ThoughtBubble({
       )}
       <span
         className={
-          `absolute left-1/2 -translate-x-1/2 bg-white border-r border-b border-zinc-300 rotate-45 ` +
+          `absolute left-1/2 -translate-x-1/2 rotate-45 ` +
           (size === 'xl'
             ? '-bottom-2 w-4 h-4'
             : size === 'lg'
               ? '-bottom-1.5 w-3.5 h-3.5'
               : '-bottom-1.5 w-3 h-3')
         }
+        style={{
+          background: '#FAF2DF',
+          borderRight: '2px solid var(--reigns-ink)',
+          borderBottom: '2px solid var(--reigns-ink)',
+        }}
       />
     </div>
   )

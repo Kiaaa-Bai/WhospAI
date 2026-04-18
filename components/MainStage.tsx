@@ -3,21 +3,25 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { Brain, Shield, Detective, HourglassMedium, ListNumbers } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
+import { providerBg } from '@/lib/provider-colors'
 import type { GameState } from '@/hooks/useGameReducer'
 import type { Player, PlayerId, ModelSlug } from '@/lib/game/types'
 
 function BucketGroup({
   label,
-  labelClass,
+  labelStyle,
   children,
 }: {
   label: string
-  labelClass: string
+  labelStyle?: React.CSSProperties
   children: React.ReactNode
 }) {
   return (
     <div className="flex flex-col items-center gap-2.5">
-      <div className={`text-base font-bold tracking-[0.18em] uppercase ${labelClass}`}>
+      <div
+        className="text-base font-mono font-bold tracking-[0.18em] uppercase"
+        style={labelStyle}
+      >
         {label}
       </div>
       <div className="flex items-center gap-3">{children}</div>
@@ -29,12 +33,17 @@ type BucketVariant = 'now' | 'next' | 'done' | 'skipped' | 'out'
 
 function BucketAvatar({ player, variant }: { player: Player; variant: BucketVariant }) {
   const size = variant === 'now' ? 80 : 64
-  const ringClass = variant === 'now'
-    ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full'
-    : ''
+  const ringStyle: React.CSSProperties =
+    variant === 'now'
+      ? {
+          boxShadow:
+            '0 0 0 3px var(--reigns-gold), 0 0 0 5px var(--reigns-bg-soft)',
+          borderRadius: '9999px',
+        }
+      : {}
   const imgClass =
     variant === 'out' || variant === 'done' || variant === 'skipped'
-      ? 'grayscale opacity-50'
+      ? 'grayscale opacity-60'
       : ''
 
   return (
@@ -43,17 +52,23 @@ function BucketAvatar({ player, variant }: { player: Player; variant: BucketVari
       transition={{ type: 'spring', stiffness: 200, damping: 25 }}
       className="relative"
     >
-      <div className={ringClass}>
+      <div style={ringStyle}>
         <Avatar modelSlug={player.modelSlug} size={size} className={imgClass} />
       </div>
       {variant === 'out' && (
-        <span className="absolute inset-0 flex items-center justify-center pointer-events-none text-red-500 text-5xl font-bold">
+        <span
+          className="absolute inset-0 flex items-center justify-center pointer-events-none font-bold text-5xl"
+          style={{ color: 'var(--reigns-red)' }}
+        >
           ✕
         </span>
       )}
       {variant === 'skipped' && (
-        <span className="absolute -bottom-1 -right-1 bg-zinc-900 rounded-full p-1 border border-zinc-700">
-          <HourglassMedium weight="fill" size={16} className="text-amber-500 block" />
+        <span
+          className="absolute -bottom-1 -right-1 rounded-full p-1"
+          style={{ background: 'var(--reigns-ink)', border: '2px solid var(--reigns-bg-soft)' }}
+        >
+          <HourglassMedium weight="fill" size={16} style={{ color: 'var(--reigns-gold)' }} />
         </span>
       )}
     </motion.div>
@@ -160,7 +175,7 @@ export function MainStage({ state }: Props) {
         />
       </div>
 
-      {/* Avatar */}
+      {/* Focus card — provider-colored portrait card with word chip */}
       <div className="shrink-0 flex items-center justify-center">
         <AnimatePresence mode="wait">
           <motion.div
@@ -168,46 +183,84 @@ export function MainStage({ state }: Props) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`${state.currentSpeaker === focus.id ? 'ring-4 ring-amber-400 ring-offset-4 ring-offset-zinc-950 rounded-full' : ''}`}
+            className="relative rounded-xl flex items-center justify-center"
+            style={{
+              background: providerBg(focus.modelSlug),
+              border: '3px solid var(--reigns-ink)',
+              boxShadow:
+                state.currentSpeaker === focus.id
+                  ? '0 0 0 4px var(--reigns-gold), 6px 6px 0 0 var(--reigns-ink)'
+                  : '6px 6px 0 0 var(--reigns-ink)',
+              width: 200,
+              height: 200,
+            }}
           >
-            <Avatar modelSlug={focus.modelSlug} size={150} />
+            <Avatar modelSlug={focus.modelSlug} size={130} className="drop-shadow-lg" />
+            {/* Word chip pinned to bottom */}
+            <span
+              className="absolute left-2 right-2 bottom-2 ink-chip justify-center"
+              style={{ padding: '6px 10px', fontSize: 13 }}
+            >
+              <span className="font-bold uppercase tracking-widest">{focus.word}</span>
+            </span>
           </motion.div>
         </AnimatePresence>
       </div>
 
       {/* Desk — fills remainder. reasoning + speaking order strip */}
-      <div className="flex-1 min-h-0 w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-4 text-center flex flex-col">
-        <div className="shrink-0 flex items-center justify-center gap-2 text-sm text-zinc-400">
+      <div
+        className="flex-1 min-h-0 w-full rounded-xl p-4 text-center flex flex-col"
+        style={{
+          background: 'var(--reigns-bg-soft)',
+          border: '2px solid var(--reigns-ink)',
+          boxShadow: '4px 4px 0 0 var(--reigns-ink)',
+        }}
+      >
+        <div
+          className="shrink-0 flex items-center justify-center gap-2 font-mono font-bold tracking-[0.2em] uppercase text-xs"
+          style={{ color: 'var(--reigns-ink-soft)' }}
+        >
           {focus.role === 'undercover'
-            ? <Detective weight="fill" size={16} className="text-red-400" />
-            : <Shield weight="fill" size={16} className="text-emerald-400" />}
+            ? <Detective weight="fill" size={14} style={{ color: 'var(--reigns-red)' }} />
+            : <Shield weight="fill" size={14} style={{ color: 'var(--reigns-green)' }} />}
           {focus.displayName}
         </div>
-        <div className={`shrink-0 text-3xl font-bold mb-3 ${roleAccent}`}>{focus.word}</div>
 
-        {/* Reasoning — fixed 180px (slightly smaller to give room below). */}
-        <div className="shrink-0 flex flex-col">
-          <div className="flex items-center gap-1.5 mb-1.5 text-zinc-500">
+        {/* Reasoning — fixed 150px */}
+        <div className="shrink-0 flex flex-col mt-3">
+          <div className="flex items-center gap-1.5 mb-1.5" style={{ color: 'var(--reigns-ink-soft)' }}>
             <Brain weight="fill" size={12} />
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
+            <span className="text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
               Inner Thoughts
             </span>
           </div>
-          <div className="h-[150px] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
+          <div
+            className="h-[150px] overflow-y-auto rounded-lg p-4 text-left text-base leading-relaxed whitespace-pre-wrap break-words"
+            style={{
+              background: '#FAF2DF',
+              border: '2px solid var(--reigns-ink)',
+              color: 'var(--reigns-ink)',
+            }}
+          >
             {reasoning || (
-              <span className="italic text-zinc-500 flex items-center gap-1.5">
+              <span
+                className="italic flex items-center gap-1.5"
+                style={{ color: 'var(--reigns-ink-faint)' }}
+              >
                 <Brain weight="fill" size={16} /> thinking…
               </span>
             )}
           </div>
         </div>
 
-        {/* Speaking order — borderless, label + divider on top, large
-            centered row spanning the desk's width. */}
-        <div className="flex-1 min-h-0 mt-4 pt-3 border-t border-zinc-800 flex flex-col">
-          <div className="flex items-center gap-1.5 mb-2 text-zinc-500 shrink-0">
+        {/* Speaking order — label + divider + row */}
+        <div
+          className="flex-1 min-h-0 mt-4 pt-3 flex flex-col"
+          style={{ borderTop: '2px solid var(--reigns-border-soft)' }}
+        >
+          <div className="flex items-center gap-1.5 mb-2 shrink-0" style={{ color: 'var(--reigns-ink-soft)' }}>
             <ListNumbers weight="fill" size={12} />
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
+            <span className="text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
               Speaking Order
             </span>
           </div>
@@ -215,35 +268,35 @@ export function MainStage({ state }: Props) {
             <LayoutGroup id="speaking-order">
               <div className="flex items-center justify-center gap-8 flex-wrap">
               {buckets.now && (
-                <BucketGroup label="NOW" labelClass="text-amber-400">
+                <BucketGroup label="NOW" labelStyle={{ color: 'var(--reigns-gold)' }}>
                   {[buckets.now].map(p => (
                     <BucketAvatar key={p.id} player={p} variant="now" />
                   ))}
                 </BucketGroup>
               )}
               {buckets.upNext.length > 0 && (
-                <BucketGroup label="UP NEXT" labelClass="text-zinc-300">
+                <BucketGroup label="UP NEXT" labelStyle={{ color: 'var(--reigns-ink)' }}>
                   {buckets.upNext.map(p => (
                     <BucketAvatar key={p.id} player={p} variant="next" />
                   ))}
                 </BucketGroup>
               )}
               {buckets.done.length > 0 && (
-                <BucketGroup label="DONE" labelClass="text-zinc-500">
+                <BucketGroup label="DONE" labelStyle={{ color: 'var(--reigns-ink-faint)' }}>
                   {buckets.done.map(p => (
                     <BucketAvatar key={p.id} player={p} variant="done" />
                   ))}
                 </BucketGroup>
               )}
               {buckets.skipped.length > 0 && (
-                <BucketGroup label="SKIPPED" labelClass="text-amber-500">
+                <BucketGroup label="SKIPPED" labelStyle={{ color: 'var(--reigns-gold)' }}>
                   {buckets.skipped.map(p => (
                     <BucketAvatar key={p.id} player={p} variant="skipped" />
                   ))}
                 </BucketGroup>
               )}
               {buckets.out.length > 0 && (
-                <BucketGroup label="OUT" labelClass="text-red-400">
+                <BucketGroup label="OUT" labelStyle={{ color: 'var(--reigns-red)' }}>
                   {buckets.out.map(p => (
                     <BucketAvatar key={p.id} player={p} variant="out" />
                   ))}

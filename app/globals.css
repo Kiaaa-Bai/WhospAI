@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+  --font-heading: var(--font-space-mono), var(--font-noto-sc), system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -117,14 +117,103 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Reigns: Three Kingdoms-inspired warm palette
+   ─────────────────────────────────────────────
+   Light sandstone/parchment base with muted provider color cards and
+   dark warm ink for pills/chips/text. */
+:root {
+  --reigns-bg: #E8D4A6;
+  --reigns-bg-soft: #F0E4CE;
+  --reigns-bg-strong: #D6BF8F;
+  --reigns-ink: #2A2723;
+  --reigns-ink-soft: #5C4E42;
+  --reigns-ink-faint: #8B7B6A;
+  --reigns-border: #8B7B6A;
+  --reigns-border-soft: #B8A888;
+  --reigns-accent-strip: #3A5A52;
+
+  --reigns-openai: #4E8B6D;
+  --reigns-anthropic: #D67F42;
+  --reigns-google: #4C7CB0;
+  --reigns-deepseek: #7957A5;
+  --reigns-xai: #3A3633;
+  --reigns-alibaba: #E3A63F;
+
+  --reigns-red: #C8453D;
+  --reigns-green: #5FA96B;
+  --reigns-gold: #D9A94A;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    background: var(--reigns-bg);
+    color: var(--reigns-ink);
   }
   html {
     @apply font-sans;
   }
+}
+
+/* Pixel-art-ish button with thick offset shadow that gets crushed on press */
+.pixel-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--reigns-ink);
+  background: var(--reigns-bg-soft);
+  color: var(--reigns-ink);
+  font-family: var(--font-space-mono), ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 0 var(--reigns-ink);
+  transition: transform 80ms ease-out, box-shadow 80ms ease-out, background 120ms;
+  cursor: pointer;
+}
+.pixel-btn:hover:not(:disabled) {
+  background: var(--reigns-bg);
+}
+.pixel-btn:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 var(--reigns-ink);
+}
+.pixel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 4px 4px 0 0 var(--reigns-border);
+}
+.pixel-btn.pixel-btn-primary {
+  background: var(--reigns-gold);
+}
+.pixel-btn.pixel-btn-primary:hover:not(:disabled) {
+  background: #E8BB5A;
+}
+.pixel-btn.pixel-btn-danger {
+  background: var(--reigns-red);
+  color: #F5EDDB;
+}
+.pixel-btn.pixel-btn-danger:hover:not(:disabled) {
+  background: #D4554D;
+}
+
+/* Dark ink pill — for p-id / round / status chips (like Reigns "2↑ 8♥") */
+.ink-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--reigns-ink);
+  color: #F5EDDB;
+  font-family: var(--font-space-mono), ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  border-radius: 4px;
 }

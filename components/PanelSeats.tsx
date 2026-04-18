@@ -12,12 +12,12 @@ function SectionLabel({
   text: string
 }) {
   return (
-    <div className="flex items-center gap-1.5 mb-2 text-zinc-500">
-      <span className="text-zinc-400">{icon}</span>
-      <span className="text-[11px] font-bold uppercase tracking-[0.18em]">
+    <div className="flex items-center gap-1.5 mb-2" style={{ color: 'var(--reigns-ink-soft)' }}>
+      <span style={{ color: 'var(--reigns-ink)' }}>{icon}</span>
+      <span className="text-[11px] font-mono font-bold uppercase tracking-[0.18em]">
         {text}
       </span>
-      <div className="flex-1 h-px bg-zinc-800 ml-1" />
+      <div className="flex-1 h-0.5 ml-1" style={{ background: 'var(--reigns-border-soft)' }} />
     </div>
   )
 }

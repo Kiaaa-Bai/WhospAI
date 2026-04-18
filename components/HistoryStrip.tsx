@@ -31,7 +31,14 @@ export function HistoryStrip({ state }: { state: GameState }) {
 
   if (rows.length === 0) {
     return (
-      <div className="col-span-6 text-[10px] leading-tight bg-zinc-900/60 border border-zinc-800 rounded px-2 py-1.5 text-zinc-600 italic text-center">
+      <div
+        className="col-span-6 text-[10px] font-mono leading-tight rounded px-2 py-1.5 italic text-center"
+        style={{
+          background: 'rgba(0,0,0,0.05)',
+          border: '2px dashed var(--reigns-border-soft)',
+          color: 'var(--reigns-ink-faint)',
+        }}
+      >
         no rounds yet
       </div>
     )
@@ -93,7 +100,7 @@ function Cell({
 
   let statementCell: React.ReactNode
   if (eliminatedBefore) {
-    statementCell = <Skull weight="fill" size={12} className="text-zinc-600 inline" />
+    statementCell = <Skull weight="fill" size={12} style={{ color: 'var(--reigns-ink-faint)' }} className="inline" />
   } else if (stmt) {
     statementCell = stmt.text
   } else if (phaseOpenForThisRow) {
@@ -103,7 +110,7 @@ function Cell({
     statementCell = <span className="text-zinc-700">&nbsp;</span>
   } else {
     statementCell = (
-      <HourglassMedium weight="fill" size={12} className="text-zinc-600 inline" />
+      <HourglassMedium weight="fill" size={12} style={{ color: 'var(--reigns-ink-faint)' }} className="inline" />
     )
   }
 
@@ -117,23 +124,37 @@ function Cell({
         </>
       )
     } else if (vote && vote.targetId === null) {
-      voteCell = <HourglassMedium weight="fill" size={12} className="text-zinc-600" />
+      voteCell = <HourglassMedium weight="fill" size={12} style={{ color: 'var(--reigns-ink-faint)' }} />
     }
   }
 
   const LabelIcon = row.tiebreak ? Scales : FilmSlate
-  const labelColor = row.tiebreak ? 'text-amber-500' : 'text-zinc-500'
 
   return (
-    <div className="text-[11px] leading-tight bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 flex flex-col">
-      <div className={`flex items-center gap-1 text-[10px] font-mono ${labelColor}`}>
+    <div
+      className="text-[11px] leading-tight rounded px-2 py-1.5 flex flex-col"
+      style={{
+        background: '#FAF2DF',
+        border: '2px solid var(--reigns-border-soft)',
+      }}
+    >
+      <div
+        className="flex items-center gap-1 text-[10px] font-mono font-bold"
+        style={{ color: row.tiebreak ? 'var(--reigns-gold)' : 'var(--reigns-ink-faint)' }}
+      >
         <LabelIcon weight="fill" size={11} />
         <span>{row.round}</span>
       </div>
-      <div className="flex-1 text-zinc-300 break-words whitespace-normal min-h-[16px]">
+      <div
+        className="flex-1 break-words whitespace-normal min-h-[16px]"
+        style={{ color: 'var(--reigns-ink)' }}
+      >
         {statementCell}
       </div>
-      <div className="text-amber-400 flex items-center gap-1 min-h-[20px] mt-0.5">
+      <div
+        className="flex items-center gap-1 min-h-[20px] mt-0.5"
+        style={{ color: 'var(--reigns-gold)' }}
+      >
         {voteCell}
       </div>
     </div>

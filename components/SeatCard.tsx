@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Detective, Shield } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
+import { providerBg } from '@/lib/provider-colors'
 import type { Player, ModelSlug } from '@/lib/game/types'
 
 interface Props {
@@ -16,14 +17,8 @@ interface Props {
 export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }: Props) {
   const eliminated = player.eliminated
   const role = player.role
-  const roleAccent = role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
   const RoleIcon = role === 'undercover' ? Detective : Shield
-  const roleIconColor = role === 'undercover' ? 'text-red-400' : 'text-emerald-400'
 
-  // Bubble appears ONLY when there's content to show:
-  //  - speaking / spoken: currentSpeech text
-  //  - voted: target avatar
-  // Otherwise the slot is empty (no container, no ellipsis).
   let bubble: React.ReactNode = null
   if (!eliminated) {
     if (voteTarget) {
@@ -51,32 +46,68 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
       layout
       className="flex flex-col items-center gap-2 w-full relative"
     >
-      {/* Bubble slot — fixed reservation height so the row stays aligned
-          even when some players have no bubble. */}
+      {/* Bubble slot — fixed height so rows stay aligned. */}
       <div className="h-20 w-full flex items-end justify-center">
         {bubble}
       </div>
 
-      {/* Avatar */}
-      <div className={`relative ${isActive ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full' : ''}`}>
-        <Avatar modelSlug={player.modelSlug} size={60} className={eliminated ? 'grayscale opacity-40' : ''} />
+      {/* Character card — provider color bg with avatar centered, like Reigns */}
+      <div
+        className="relative w-full aspect-[4/5] rounded-lg overflow-hidden flex items-center justify-center transition-transform"
+        style={{
+          background: providerBg(player.modelSlug),
+          border: '2px solid var(--reigns-ink)',
+          boxShadow: isActive
+            ? '0 0 0 3px var(--reigns-gold), 4px 4px 0 0 var(--reigns-ink)'
+            : '4px 4px 0 0 var(--reigns-ink)',
+          opacity: eliminated ? 0.45 : 1,
+          filter: eliminated ? 'grayscale(0.7)' : 'none',
+        }}
+      >
+        {/* Top-left p-id chip */}
+        <span
+          className="absolute top-1.5 left-1.5 ink-chip"
+          style={{ fontSize: 10 }}
+        >
+          {player.id.toUpperCase()}
+        </span>
+
+        {/* Top-right role icon chip */}
+        <span
+          className="absolute top-1.5 right-1.5 ink-chip"
+          style={{ fontSize: 10, padding: '3px 4px' }}
+          title={role}
+        >
+          <RoleIcon weight="fill" size={12} />
+        </span>
+
+        {/* Avatar */}
+        <Avatar modelSlug={player.modelSlug} size={64} className="drop-shadow-md" />
+
         {eliminated && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-red-500 text-4xl font-bold">✕</span>
-          </div>
+          <span
+            className="absolute inset-0 flex items-center justify-center pointer-events-none font-black"
+            style={{ color: 'var(--reigns-red)', fontSize: 60 }}
+          >
+            ✕
+          </span>
         )}
+
+        {/* Bottom dark plaque with word */}
+        <div
+          className="absolute left-1.5 right-1.5 bottom-1.5 ink-chip justify-center"
+          style={{ padding: '4px 8px' }}
+        >
+          <span className="truncate font-bold uppercase">{player.word}</span>
+        </div>
       </div>
 
-      {/* Desk: name + word + role icon + p-id badge */}
-      <div className={`relative w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-center min-h-[110px] flex flex-col justify-between ${eliminated ? 'opacity-40' : ''}`}>
-        <span className="absolute top-1.5 left-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5">
-          {player.id}
-        </span>
-        <div className="text-xs text-zinc-400 truncate pt-3">{player.displayName}</div>
-        <div className={`text-xl font-bold truncate my-2 ${roleAccent}`}>{player.word}</div>
-        <div className="flex items-center justify-center">
-          <RoleIcon weight="fill" size={16} className={roleIconColor} />
-        </div>
+      {/* displayName under the card */}
+      <div
+        className="text-xs font-mono font-bold tracking-wider text-center truncate w-full"
+        style={{ color: 'var(--reigns-ink)' }}
+      >
+        {player.displayName}
       </div>
     </motion.div>
   )

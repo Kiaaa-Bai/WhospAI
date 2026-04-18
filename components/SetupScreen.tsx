@@ -4,11 +4,10 @@ import { motion } from 'framer-motion'
 import {
   Shield, Detective, Sparkle, Shuffle, Play, MagicWand, CaretRight,
 } from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Avatar } from './Avatar'
 import { ROSTER } from '@/lib/game/roster'
 import { WORD_PAIRS } from '@/data/word-pairs'
+import { providerBg } from '@/lib/provider-colors'
 import type { GameConfig } from '@/lib/game/types'
 
 type Lang = 'en' | 'zh' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'ru'
@@ -62,73 +61,112 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-x-hidden">
-      {/* Top banner */}
-      <header className="shrink-0 border-b border-zinc-800 px-8 py-5 flex items-center gap-3">
-        <Detective weight="fill" size={28} className="text-amber-400" />
+    <div
+      className="min-h-screen flex flex-col overflow-x-hidden"
+      style={{ background: 'var(--reigns-bg)', color: 'var(--reigns-ink)' }}
+    >
+      {/* Dark accent banner */}
+      <header
+        className="shrink-0 px-8 py-5 flex items-center gap-3"
+        style={{
+          background: 'var(--reigns-accent-strip)',
+          color: '#F5EDDB',
+          borderBottom: '3px solid var(--reigns-ink)',
+        }}
+      >
+        <Detective weight="fill" size={28} style={{ color: 'var(--reigns-gold)' }} />
         <div>
-          <div className="font-black tracking-[0.2em] text-xl">WHOSPY</div>
-          <div className="text-xs text-zinc-500">Watch 6 AI models play Who is the Spy</div>
+          <div className="font-heading font-black tracking-[0.3em] text-xl">WHOSPY</div>
+          <div className="text-xs font-mono opacity-80">
+            Watch 6 AI models play Who is the Spy
+          </div>
         </div>
       </header>
 
       {/* Two-column body */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(420px,45%)_1fr] min-h-0">
         {/* LEFT — word setup */}
-        <div className="border-b lg:border-b-0 lg:border-r border-zinc-800 px-8 py-8 flex flex-col gap-8">
+        <div
+          className="border-b lg:border-b-0 lg:border-r px-8 py-8 flex flex-col gap-7"
+          style={{ borderColor: 'var(--reigns-border)' }}
+        >
           <SectionHeader icon={<MagicWand weight="fill" size={14} />} text="Secret Words" />
 
           {/* Inputs */}
           <div className="space-y-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Shield weight="fill" size={14} className="text-emerald-400" />
-                <label className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
+                <Shield weight="fill" size={14} style={{ color: 'var(--reigns-green)' }} />
+                <label
+                  className="text-xs font-mono font-bold uppercase tracking-[0.18em]"
+                  style={{ color: 'var(--reigns-ink-soft)' }}
+                >
                   Civilian word
                 </label>
               </div>
-              <Input
+              <input
                 value={civilianWord}
                 onChange={e => setCivilianWord(e.target.value)}
                 placeholder={LANGUAGES.find(l => l.code === lang)!.placeholderCivilian}
                 maxLength={30}
-                className="text-lg"
+                className="w-full px-4 py-3 rounded-lg text-lg font-sans outline-none focus:ring-2 focus:ring-offset-2"
+                style={{
+                  background: '#FAF2DF',
+                  border: '2px solid var(--reigns-ink)',
+                  color: 'var(--reigns-ink)',
+                  boxShadow: '3px 3px 0 0 var(--reigns-ink)',
+                }}
               />
             </div>
 
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Detective weight="fill" size={14} className="text-red-400" />
-                <label className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
+                <Detective weight="fill" size={14} style={{ color: 'var(--reigns-red)' }} />
+                <label
+                  className="text-xs font-mono font-bold uppercase tracking-[0.18em]"
+                  style={{ color: 'var(--reigns-ink-soft)' }}
+                >
                   Undercover word
                 </label>
               </div>
-              <Input
+              <input
                 value={undercoverWord}
                 onChange={e => setUndercoverWord(e.target.value)}
                 placeholder={LANGUAGES.find(l => l.code === lang)!.placeholderUndercover}
                 maxLength={30}
-                className="text-lg"
+                className="w-full px-4 py-3 rounded-lg text-lg font-sans outline-none focus:ring-2 focus:ring-offset-2"
+                style={{
+                  background: '#FAF2DF',
+                  border: '2px solid var(--reigns-ink)',
+                  color: 'var(--reigns-ink)',
+                  boxShadow: '3px 3px 0 0 var(--reigns-ink)',
+                }}
               />
             </div>
           </div>
 
           {/* AI Generate */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <SectionHeader
                 icon={<Sparkle weight="fill" size={14} />}
                 text="Let AI Pick"
                 compact
               />
-              <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 rounded p-0.5 ml-3 flex-wrap">
+              <div
+                className="flex items-center gap-0.5 rounded p-0.5 flex-wrap shrink-0"
+                style={{
+                  background: 'var(--reigns-bg-soft)',
+                  border: '2px solid var(--reigns-border)',
+                }}
+              >
                 <LangToggle value={lang} onChange={setLang} />
               </div>
             </div>
             <button
               onClick={generate}
               disabled={generating}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/40 text-amber-200 hover:from-amber-500/25 hover:to-amber-500/10 hover:border-amber-500/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="pixel-btn pixel-btn-primary w-full py-3 text-sm"
             >
               {generating ? (
                 <>
@@ -136,19 +174,26 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Shuffle weight="fill" size={18} />
+                    <Shuffle weight="fill" size={16} />
                   </motion.span>
-                  <span className="font-semibold tracking-wider">GENERATING…</span>
+                  GENERATING…
                 </>
               ) : (
                 <>
-                  <Sparkle weight="fill" size={18} />
-                  <span className="font-semibold tracking-wider">GENERATE WITH AI</span>
+                  <Sparkle weight="fill" size={16} />
+                  GENERATE WITH AI
                 </>
               )}
             </button>
             {genError && (
-              <div className="text-xs text-red-300 bg-red-950/30 border border-red-900/50 rounded px-3 py-2">
+              <div
+                className="text-xs rounded px-3 py-2"
+                style={{
+                  background: '#F5D9D5',
+                  border: '2px solid var(--reigns-red)',
+                  color: '#6B1C18',
+                }}
+              >
                 {genError}
               </div>
             )}
@@ -168,7 +213,12 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                     setCivilianWord(p.civilian)
                     setUndercoverWord(p.undercover)
                   }}
-                  className="text-xs px-2.5 py-1.5 rounded border border-zinc-800 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800 text-zinc-300 transition-colors"
+                  className="text-xs px-2.5 py-1.5 rounded transition-colors font-mono font-bold"
+                  style={{
+                    background: 'var(--reigns-bg-soft)',
+                    border: '2px solid var(--reigns-border-soft)',
+                    color: 'var(--reigns-ink)',
+                  }}
                 >
                   {p.civilian} / {p.undercover}
                 </button>
@@ -178,9 +228,8 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
 
           {/* Start */}
           <div className="mt-auto pt-4">
-            <Button
-              className="w-full h-14 text-base tracking-[0.2em] font-bold"
-              size="lg"
+            <button
+              className="pixel-btn pixel-btn-danger w-full py-4 text-base"
               disabled={!valid}
               onClick={() =>
                 onStart({
@@ -189,18 +238,24 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                 })
               }
             >
-              <Play weight="fill" size={18} className="mr-1.5" />
+              <Play weight="fill" size={18} />
               START THE GAME
-              <CaretRight weight="fill" size={16} className="ml-1" />
-            </Button>
-            <div className="text-[10px] text-zinc-600 text-center mt-2">
+              <CaretRight weight="fill" size={16} />
+            </button>
+            <div
+              className="text-[10px] text-center mt-2 font-mono"
+              style={{ color: 'var(--reigns-ink-faint)' }}
+            >
               6 AIs · 1 undercover · you watch and judge
             </div>
           </div>
         </div>
 
         {/* RIGHT — roster showcase */}
-        <div className="px-8 py-8 bg-zinc-950/80 flex flex-col gap-5">
+        <div
+          className="px-8 py-8 flex flex-col gap-5"
+          style={{ background: 'var(--reigns-bg-strong)' }}
+        >
           <SectionHeader
             icon={<Detective weight="fill" size={14} />}
             text="Tonight's Contestants"
@@ -213,25 +268,41 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05, duration: 0.3 }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors"
+                className="relative flex flex-col items-center gap-2 p-4 rounded-lg"
+                style={{
+                  background: providerBg(r.modelSlug),
+                  border: '2px solid var(--reigns-ink)',
+                  boxShadow: '4px 4px 0 0 var(--reigns-ink)',
+                }}
               >
-                <Avatar modelSlug={r.modelSlug} size={72} />
-                <div className="text-sm font-bold text-zinc-100 text-center">
+                <Avatar modelSlug={r.modelSlug} size={72} className="drop-shadow-md" />
+                <div
+                  className="ink-chip justify-center mt-1"
+                  style={{ padding: '4px 8px', fontSize: 11 }}
+                >
                   {r.displayName}
-                </div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  {r.modelSlug.split('/')[0]}
                 </div>
               </motion.div>
             ))}
           </div>
 
-          <div className="mt-auto pt-4 border-t border-zinc-800 text-xs text-zinc-500 leading-relaxed">
+          <div
+            className="mt-auto pt-4 text-xs leading-relaxed font-mono"
+            style={{
+              color: 'var(--reigns-ink)',
+              borderTop: '2px solid var(--reigns-border-soft)',
+            }}
+          >
             Each AI gets a secret word. One gets a{' '}
-            <span className="text-red-300 font-semibold">different</span> word — the{' '}
-            <span className="text-red-300 font-semibold">undercover</span>. They describe their
-            word in short phrases without saying it, then vote to eliminate the one that sounds
-            off. Civilians win if they catch the spy before the final two players.
+            <span className="font-bold" style={{ color: 'var(--reigns-red)' }}>
+              different
+            </span>{' '}
+            word — the{' '}
+            <span className="font-bold" style={{ color: 'var(--reigns-red)' }}>
+              undercover
+            </span>
+            . They describe their word in short phrases without saying it, then vote to eliminate
+            the one that sounds off. Civilians win if they catch the spy before the final two.
           </div>
         </div>
       </div>
@@ -249,10 +320,15 @@ function SectionHeader({
   compact?: boolean
 }) {
   return (
-    <div className={`flex items-center gap-2 text-zinc-500 ${compact ? '' : 'mb-0'}`}>
-      <span className="text-zinc-400">{icon}</span>
-      <span className="text-[11px] font-bold uppercase tracking-[0.2em] shrink-0">{text}</span>
-      <div className="flex-1 h-px bg-zinc-800 ml-1" />
+    <div
+      className={`flex items-center gap-2 ${compact ? '' : 'mb-0'}`}
+      style={{ color: 'var(--reigns-ink-soft)' }}
+    >
+      <span style={{ color: 'var(--reigns-ink)' }}>{icon}</span>
+      <span className="text-[11px] font-mono font-bold uppercase tracking-[0.2em] shrink-0">
+        {text}
+      </span>
+      <div className="flex-1 h-0.5 ml-1" style={{ background: 'var(--reigns-border-soft)' }} />
     </div>
   )
 }
@@ -264,9 +340,12 @@ function LangToggle({ value, onChange }: { value: Lang; onChange: (v: Lang) => v
         <button
           key={l.code}
           onClick={() => onChange(l.code)}
-          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors ${
-            value === l.code ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
-          }`}
+          className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors"
+          style={
+            value === l.code
+              ? { background: 'var(--reigns-ink)', color: '#F5EDDB' }
+              : { background: 'transparent', color: 'var(--reigns-ink-faint)' }
+          }
         >
           {l.label}
         </button>
