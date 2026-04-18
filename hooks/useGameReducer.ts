@@ -69,24 +69,27 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       // describe-phase content doesn't bleed into the tiebreak. Tied players
       // will repopulate currentSpeech via their tiebreak speak-start; voters
       // will repopulate currentRoundVotes via tiebreak vote-cast.
+      // Phase switches clear `currentSkipped` so a player who failed in the
+      // describe phase can still reach DONE in the vote phase if they vote
+      // successfully (and vice versa).
       if (event.phase === 'tiebreak') {
         return {
           ...state,
           phase: event.phase,
           currentSpeech: {},
           currentRoundVotes: {},
+          currentSkipped: [],
         }
       }
-      // Entering vote phase clears bubbles too — voters get fresh slate;
-      // they only show vote-target avatars after they actually vote.
       if (event.phase === 'vote') {
         return {
           ...state,
           phase: event.phase,
           currentSpeech: {},
+          currentSkipped: [],
         }
       }
-      return { ...state, phase: event.phase }
+      return { ...state, phase: event.phase, currentSkipped: [] }
 
     case 'speak-start':
       // Clear both reasoning AND currentSpeech for this player so a tiebreak
