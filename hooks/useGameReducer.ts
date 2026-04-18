@@ -17,6 +17,7 @@ export interface GameState {
   votes: Vote[]
   reasoningByPlayer: Record<string, string>
   currentRoundVotes: Record<string, string | null>
+  tiedPlayers: PlayerId[]
   lastEliminationTally: Record<string, number> | null
   history: Array<{ round: number; eliminatedId: PlayerId | null; role?: Player['role'] }>
   result: GameResult | null
@@ -34,6 +35,7 @@ export const initialGameState: GameState = {
   currentStatements: [],
   votes: [],
   currentRoundVotes: {},
+  tiedPlayers: [],
   reasoningByPlayer: {},
   lastEliminationTally: null,
   history: [],
@@ -69,6 +71,15 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
           phase: event.phase,
           currentSpeech: {},
           currentRoundVotes: {},
+        }
+      }
+      // Entering vote phase clears bubbles too — voters get fresh slate;
+      // they only show vote-target avatars after they actually vote.
+      if (event.phase === 'vote') {
+        return {
+          ...state,
+          phase: event.phase,
+          currentSpeech: {},
         }
       }
       return { ...state, phase: event.phase }
@@ -172,7 +183,7 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       }
 
     case 'tie':
-      return state
+      return { ...state, tiedPlayers: event.tiedPlayers }
 
     case 'no-elimination':
       return {

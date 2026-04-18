@@ -138,14 +138,20 @@ export function usePlaybackDispatch(
           queueRef.current.shift()
           dispatch(item.event)
           if (OVERLAY_TRIGGERS.has(item.event.type)) {
+            // Greedily consume any subsequent overlay-trigger events into the
+            // batch. Also pull in `round-order` (not itself an overlay
+            // trigger) so the speaking order is set in state BEFORE the
+            // round-start overlay renders.
             let count = 1
             while (true) {
               const next = queueRef.current[0]
               if (!next || next.kind !== 'pass') break
-              if (!OVERLAY_TRIGGERS.has(next.event.type)) break
+              const isOverlay = OVERLAY_TRIGGERS.has(next.event.type)
+              const isOrder = next.event.type === 'round-order'
+              if (!isOverlay && !isOrder) break
               queueRef.current.shift()
               dispatch(next.event)
-              count++
+              if (isOverlay) count++
             }
             await sleep(overlayBatchDuration(count))
             if (abortedRef.current) return

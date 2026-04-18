@@ -17,8 +17,8 @@ export interface OverlayItem {
     modelSlug: ModelSlug
     role: 'civilian' | 'undercover'
   }
-  // Round-start only
-  alive?: Array<{ id: PlayerId; displayName: string; modelSlug: ModelSlug }>
+  // Round-start / phase-start ordered roster.
+  alive?: Array<{ id: PlayerId; displayName: string; modelSlug: ModelSlug; position: number }>
 }
 
 export interface OverlayState {
@@ -26,15 +26,10 @@ export interface OverlayState {
   currentIndex: number
 }
 
-const HOLD_MS = 1500              // time each text is held at full opacity
-const CROSSFADE_MS = 400           // text-to-text crossfade duration
-const ITEM_TOTAL_MS = HOLD_MS + CROSSFADE_MS   // 1900ms per item before advancing
+const HOLD_MS = 1500
+const CROSSFADE_MS = 400
+const ITEM_TOTAL_MS = HOLD_MS + CROSSFADE_MS
 
-/**
- * Watches state for milestone transitions and emits a batched overlay:
- * the curtain drops once, text crossfades between items, curtain rises once.
- * Multiple triggers fired in quick succession are appended to the same batch.
- */
 export function useOverlayTrigger(state: GameState): OverlayState | null {
   const [overlay, setOverlay] = useState<OverlayState | null>(null)
   const overlayRef = useRef<OverlayState | null>(null)
@@ -71,32 +66,48 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
       })
     }
 
+    // ROUND N + DESCRIBE PHASE + speaking order. Driven on round change so
+    // it fires once per round (state.order is hoisted into the playback
+    // batch so it's already set by this render).
     if (state.round > 0 && state.round !== prev.round) {
-      const alive = state.players.filter(p => !p.eliminated)
+      const order: PlayerId[] = state.order.length
+        ? state.order
+        : state.players.filter(p => !p.eliminated).map(p => p.id)
       items.push({
-        id: `round-${state.round}`,
+        id: `round-${state.round}-describe`,
         kind: 'round-start',
         title: `ROUND ${state.round}`,
-        subtitle: `Alive: ${alive.length}`,
-        alive: alive.map((p: Player) => ({
-          id: p.id,
-          displayName: p.displayName,
-          modelSlug: p.modelSlug,
-        })),
+        subtitle: 'DESCRIBE PHASE',
+        alive: buildOrderedAlive(order, state.players),
       })
     }
 
-    if (state.phase !== prev.phase && ['describe', 'vote', 'tiebreak'].includes(state.phase)) {
-      const titles: Record<string, string> = {
-        describe: 'DESCRIBE PHASE',
-        vote: 'VOTE PHASE',
-        tiebreak: 'TIEBREAK',
+    if (state.phase !== prev.phase) {
+      if (state.phase === 'vote') {
+        // Vote order is alive-by-id (the engine doesn't shuffle the vote loop).
+        const order: PlayerId[] = state.players
+          .filter(p => !p.eliminated)
+          .map(p => p.id)
+        items.push({
+          id: `round-${state.round}-vote`,
+          kind: 'round-start',
+          title: `ROUND ${state.round}`,
+          subtitle: 'VOTE PHASE',
+          alive: buildOrderedAlive(order, state.players),
+        })
+      } else if (state.phase === 'tiebreak') {
+        const tiedOrder: PlayerId[] = state.tiedPlayers.length
+          ? state.tiedPlayers
+          : state.players.filter(p => !p.eliminated).map(p => p.id)
+        items.push({
+          id: `round-${state.round}-tiebreak`,
+          kind: 'round-start',
+          title: 'TIEBREAK',
+          subtitle: `ROUND ${state.round}`,
+          alive: buildOrderedAlive(tiedOrder, state.players),
+        })
       }
-      items.push({
-        id: `phase-${state.phase}-${state.round}`,
-        kind: 'text',
-        title: titles[state.phase],
-      })
+      // Skip 'describe' phase overlay — round-start already covers it.
     }
 
     if (state.history.length > prev.historyLen) {
@@ -111,11 +122,7 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
             title: `${p.displayName.toUpperCase()} OUT`,
             subtitle: role.toUpperCase(),
             accent: role,
-            eliminated: {
-              displayName: p.displayName,
-              modelSlug: p.modelSlug,
-              role,
-            },
+            eliminated: { displayName: p.displayName, modelSlug: p.modelSlug, role },
           })
         }
       } else {
@@ -130,10 +137,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
 
     if (items.length > 0) {
       if (overlayRef.current) {
-        // Append to current batch.
         setOverlay(prev => prev ? { ...prev, items: [...prev.items, ...items] } : prev)
       } else {
-        // Start a new batch; schedule advance.
         setOverlay({ items, currentIndex: 0 })
         scheduleAdvance()
       }
@@ -157,15 +162,29 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
     setOverlay(prev => {
       if (!prev) return null
       const next = prev.currentIndex + 1
-      if (next >= prev.items.length) {
-        // Curtain goes up.
-        return null
-      }
-      // Schedule next advance.
+      if (next >= prev.items.length) return null
       scheduleAdvance()
       return { ...prev, currentIndex: next }
     })
   }
 
   return overlay
+}
+
+function buildOrderedAlive(
+  order: PlayerId[],
+  players: Player[],
+): Array<{ id: PlayerId; displayName: string; modelSlug: ModelSlug; position: number }> {
+  return order
+    .map((id, idx) => {
+      const player = players.find(p => p.id === id)
+      if (!player) return null
+      return {
+        id: player.id,
+        displayName: player.displayName,
+        modelSlug: player.modelSlug,
+        position: idx + 1,
+      }
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null)
 }

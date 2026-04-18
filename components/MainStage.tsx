@@ -6,6 +6,53 @@ import { ThoughtBubble } from './ThoughtBubble'
 import type { GameState } from '@/hooks/useGameReducer'
 import type { Player, PlayerId, ModelSlug } from '@/lib/game/types'
 
+function BucketGroup({
+  label,
+  labelClass,
+  children,
+}: {
+  label: string
+  labelClass: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className={`text-[10px] font-bold tracking-[0.15em] uppercase ${labelClass}`}>
+        {label}
+      </div>
+      <div className="flex items-center gap-1.5">{children}</div>
+    </div>
+  )
+}
+
+type BucketVariant = 'now' | 'next' | 'done' | 'out'
+
+function BucketAvatar({ player, variant }: { player: Player; variant: BucketVariant }) {
+  const size = variant === 'now' ? 38 : 28
+  const ringClass = variant === 'now'
+    ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full'
+    : ''
+  const imgClass =
+    variant === 'out' || variant === 'done' ? 'grayscale opacity-50' : ''
+
+  return (
+    <motion.div
+      layout
+      transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+      className="relative"
+    >
+      <div className={ringClass}>
+        <Avatar modelSlug={player.modelSlug} size={size} className={imgClass} />
+      </div>
+      {variant === 'out' && (
+        <span className="absolute inset-0 flex items-center justify-center pointer-events-none text-red-500 text-xl font-bold">
+          ✕
+        </span>
+      )}
+    </motion.div>
+  )
+}
+
 interface Props {
   state: GameState
 }
@@ -16,8 +63,14 @@ function nextUpId(state: GameState): PlayerId | null {
   return state.order.find(id => !spoken.has(id)) ?? null
 }
 
-function speakingOrder(state: GameState): Player[] {
-  // Bucket players: current speaker → not yet spoken (in order) → already spoken → eliminated.
+interface SpeakingBuckets {
+  now: Player | null
+  upNext: Player[]
+  done: Player[]
+  out: Player[]
+}
+
+function speakingBuckets(state: GameState): SpeakingBuckets {
   const eliminated = state.players.filter(p => p.eliminated)
   const aliveIds = state.order.length
     ? state.order
@@ -30,16 +83,12 @@ function speakingOrder(state: GameState): Player[] {
   const spoken = new Set(state.currentStatements.map(s => s.playerId))
   const current = state.currentSpeaker
 
-  const currentP = current ? aliveOrdered.find(p => p.id === current) : null
-  const notYet = aliveOrdered.filter(p => p.id !== current && !spoken.has(p.id))
-  const already = aliveOrdered.filter(p => p.id !== current && spoken.has(p.id))
-
-  return [
-    ...(currentP ? [currentP] : []),
-    ...notYet,
-    ...already,
-    ...eliminated,
-  ]
+  return {
+    now: current ? aliveOrdered.find(p => p.id === current) ?? null : null,
+    upNext: aliveOrdered.filter(p => p.id !== current && !spoken.has(p.id)),
+    done: aliveOrdered.filter(p => p.id !== current && spoken.has(p.id)),
+    out: eliminated,
+  }
 }
 
 export function MainStage({ state }: Props) {
@@ -77,7 +126,7 @@ export function MainStage({ state }: Props) {
   const showAvatarBubble = !isNextUp && !!voteTarget
   const showStatementBubble = !isNextUp && !voteTarget && !!statement
   const showEllipsis = !showAvatarBubble && !showStatementBubble
-  const order = speakingOrder(state)
+  const buckets = speakingBuckets(state)
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3">
@@ -126,48 +175,38 @@ export function MainStage({ state }: Props) {
           )}
         </div>
 
-        {/* Speaking order strip */}
+        {/* Speaking order strip — grouped by status with section labels */}
         <div className="shrink-0 mt-3 pt-3 border-t border-zinc-800">
           <LayoutGroup id="speaking-order">
-            <div className="flex items-center justify-center gap-2">
-              {order.map(p => {
-                const spoken = state.currentStatements.some(s => s.playerId === p.id)
-                const isCurrent = state.currentSpeaker === p.id
-                const isEliminated = p.eliminated
-                return (
-                  <motion.div
-                    key={p.id}
-                    layout
-                    transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                    className="relative"
-                  >
-                    <div
-                      className={
-                        isCurrent
-                          ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full'
-                          : ''
-                      }
-                    >
-                      <Avatar
-                        modelSlug={p.modelSlug}
-                        size={isCurrent ? 36 : 28}
-                        className={
-                          isEliminated
-                            ? 'grayscale opacity-40'
-                            : spoken
-                              ? 'grayscale opacity-50'
-                              : ''
-                        }
-                      />
-                    </div>
-                    {isEliminated && (
-                      <span className="absolute inset-0 flex items-center justify-center pointer-events-none text-red-500 text-xl font-bold">
-                        ✕
-                      </span>
-                    )}
-                  </motion.div>
-                )
-              })}
+            <div className="flex items-end justify-center gap-4 flex-wrap">
+              {buckets.now && (
+                <BucketGroup label="NOW" labelClass="text-amber-400">
+                  {[buckets.now].map(p => (
+                    <BucketAvatar key={p.id} player={p} variant="now" />
+                  ))}
+                </BucketGroup>
+              )}
+              {buckets.upNext.length > 0 && (
+                <BucketGroup label="UP NEXT" labelClass="text-zinc-300">
+                  {buckets.upNext.map(p => (
+                    <BucketAvatar key={p.id} player={p} variant="next" />
+                  ))}
+                </BucketGroup>
+              )}
+              {buckets.done.length > 0 && (
+                <BucketGroup label="DONE" labelClass="text-zinc-500">
+                  {buckets.done.map(p => (
+                    <BucketAvatar key={p.id} player={p} variant="done" />
+                  ))}
+                </BucketGroup>
+              )}
+              {buckets.out.length > 0 && (
+                <BucketGroup label="OUT" labelClass="text-red-400">
+                  {buckets.out.map(p => (
+                    <BucketAvatar key={p.id} player={p} variant="out" />
+                  ))}
+                </BucketGroup>
+              )}
             </div>
           </LayoutGroup>
         </div>
