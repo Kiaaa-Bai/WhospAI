@@ -3,7 +3,7 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { Brain, Shield, Detective, HourglassMedium, ListNumbers } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
-import { providerBg } from '@/lib/provider-colors'
+import { providerBg, roleFill, CARD_TEXT } from '@/lib/provider-colors'
 import type { GameState } from '@/hooks/useGameReducer'
 import type { Player, PlayerId, ModelSlug } from '@/lib/game/types'
 
@@ -17,58 +17,85 @@ function BucketGroup({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center gap-2.5">
+    <div className="flex flex-col items-center gap-2">
       <div
-        className="text-base font-mono font-bold tracking-[0.18em] uppercase"
+        className="text-xs font-mono font-bold tracking-[0.18em] uppercase"
         style={labelStyle}
       >
         {label}
       </div>
-      <div className="flex items-center gap-3">{children}</div>
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   )
 }
 
 type BucketVariant = 'now' | 'next' | 'done' | 'skipped' | 'out'
 
-function BucketAvatar({ player, variant }: { player: Player; variant: BucketVariant }) {
-  const size = variant === 'now' ? 80 : 64
-  const ringStyle: React.CSSProperties =
-    variant === 'now'
-      ? {
-          boxShadow:
-            '0 0 0 3px var(--reigns-gold), 0 0 0 5px var(--reigns-bg-soft)',
-          borderRadius: '9999px',
-        }
-      : {}
-  const imgClass =
-    variant === 'out' || variant === 'done' || variant === 'skipped'
-      ? 'grayscale opacity-60'
-      : ''
+/**
+ * Mini-card version of a seat — used in the speaking-order strip instead of
+ * a bare round avatar. Follows the same provider-outline + role-fill rule.
+ */
+function BucketCard({
+  player,
+  variant,
+}: {
+  player: Player
+  variant: BucketVariant
+}) {
+  const isNow = variant === 'now'
+  const dim = variant === 'out' || variant === 'done' || variant === 'skipped'
+
+  const providerOutline = providerBg(player.modelSlug)
+  const cardFill = roleFill(player.role)
+  const roleGlow = cardFill
+
+  const size = isNow ? 76 : 56
+  const avatarSize = isNow ? 48 : 36
 
   return (
     <motion.div
       layout
       transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-      className="relative"
+      className="relative rounded-lg flex flex-col items-center justify-center"
+      style={{
+        width: size,
+        height: size + 18,
+        background: cardFill,
+        border: `3px solid ${providerOutline}`,
+        boxShadow: isNow
+          ? `0 0 0 3px ${roleGlow}, 3px 3px 0 0 var(--reigns-ink)`
+          : '3px 3px 0 0 var(--reigns-ink)',
+        opacity: dim ? 0.55 : 1,
+      }}
     >
-      <div style={ringStyle}>
-        <Avatar modelSlug={player.modelSlug} size={size} className={imgClass} />
+      <Avatar
+        modelSlug={player.modelSlug}
+        size={avatarSize}
+        className={dim ? 'grayscale' : ''}
+      />
+      <div
+        className="text-[9px] font-mono font-bold uppercase tracking-wider mt-0.5"
+        style={{ color: CARD_TEXT }}
+      >
+        {player.id}
       </div>
       {variant === 'out' && (
         <span
-          className="absolute inset-0 flex items-center justify-center pointer-events-none font-bold text-5xl"
-          style={{ color: 'var(--reigns-red)' }}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none font-black text-4xl"
+          style={{ color: 'var(--reigns-ink)' }}
         >
           ✕
         </span>
       )}
       {variant === 'skipped' && (
         <span
-          className="absolute -bottom-1 -right-1 rounded-full p-1"
-          style={{ background: 'var(--reigns-ink)', border: '2px solid var(--reigns-bg-soft)' }}
+          className="absolute -top-1.5 -right-1.5 rounded-full p-0.5"
+          style={{
+            background: 'var(--reigns-ink)',
+            border: '2px solid var(--reigns-bg-soft)',
+          }}
         >
-          <HourglassMedium weight="fill" size={16} style={{ color: 'var(--reigns-gold)' }} />
+          <HourglassMedium weight="fill" size={12} style={{ color: 'var(--reigns-gold)' }} />
         </span>
       )}
     </motion.div>
@@ -110,7 +137,6 @@ function speakingBuckets(state: GameState): SpeakingBuckets {
   const skippedIds = new Set(state.currentSkipped)
   const current = state.currentSpeaker
 
-  // Skipped players DON'T appear in DONE; they get their own bucket.
   return {
     now: current ? aliveOrdered.find(p => p.id === current) ?? null : null,
     upNext: aliveOrdered.filter(
@@ -134,11 +160,13 @@ export function MainStage({ state }: Props) {
     isNextUp = true
   }
 
-  const focus: Player | undefined = focusId ? state.players.find(p => p.id === focusId) : undefined
+  const focus: Player | undefined = focusId
+    ? state.players.find(p => p.id === focusId)
+    : undefined
 
   if (!focus) {
     return (
-      <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+      <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--reigns-ink-soft)' }}>
         Dealing the words…
       </div>
     )
@@ -146,24 +174,22 @@ export function MainStage({ state }: Props) {
 
   const myVote = state.currentRoundVotes[focus.id]
   const voteTarget = myVote ? state.players.find(p => p.id === myVote) : null
-  const roleAccent = focus.role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
   const reasoning = state.reasoningByPlayer[focus.id] ?? ''
   const statement = state.currentSpeech[focus.id] ?? ''
 
-  // Bubble content selection — bubble is always visible.
-  // - voteTarget present (any phase) → avatar
-  // - currentSpeech present → statement text
-  // - else → ellipsis (always-on placeholder)
-  // This handles tiebreak naturally: tied players keep their tiebreak
-  // statement bubble, voters get avatar after voting, others ellipsis.
   const showAvatarBubble = !isNextUp && !!voteTarget
   const showStatementBubble = !isNextUp && !voteTarget && !!statement
   const showEllipsis = !showAvatarBubble && !showStatementBubble
   const buckets = speakingBuckets(state)
 
+  const focusCardFill = roleFill(focus.role)
+  const focusProviderOutline = providerBg(focus.modelSlug)
+  const focusRoleGlow = focusCardFill
+  const isFocusActive = state.currentSpeaker === focus.id
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-3">
-      {/* Bubble area — fixed 240px, always present, anchored to top */}
+      {/* Speech bubble */}
       <div className="shrink-0 w-full flex items-start justify-center">
         <ThoughtBubble
           text={showStatementBubble ? statement : undefined}
@@ -175,7 +201,7 @@ export function MainStage({ state }: Props) {
         />
       </div>
 
-      {/* Focus card — provider-colored portrait card with word chip */}
+      {/* Circular avatar — no background card */}
       <div className="shrink-0 flex items-center justify-center">
         <AnimatePresence mode="wait">
           <motion.div
@@ -183,52 +209,52 @@ export function MainStage({ state }: Props) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative rounded-xl flex items-center justify-center"
-            style={{
-              background: providerBg(focus.modelSlug),
-              border: '3px solid var(--reigns-ink)',
-              boxShadow:
-                state.currentSpeaker === focus.id
-                  ? '0 0 0 4px var(--reigns-gold), 6px 6px 0 0 var(--reigns-ink)'
-                  : '6px 6px 0 0 var(--reigns-ink)',
-              width: 200,
-              height: 200,
-            }}
           >
-            <Avatar modelSlug={focus.modelSlug} size={130} className="drop-shadow-lg" />
-            {/* Word chip pinned to bottom */}
-            <span
-              className="absolute left-2 right-2 bottom-2 ink-chip justify-center"
-              style={{ padding: '6px 10px', fontSize: 13 }}
-            >
-              <span className="font-bold uppercase tracking-widest">{focus.word}</span>
-            </span>
+            <Avatar modelSlug={focus.modelSlug} size={150} className="drop-shadow-lg" />
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Desk — fills remainder. reasoning + speaking order strip */}
+      {/* Desk card — provider outline, role fill. Contains name + word,
+          inner thoughts, and speaking-order strip. */}
       <div
-        className="flex-1 min-h-0 w-full rounded-xl p-4 text-center flex flex-col"
+        className="flex-1 min-h-0 w-full rounded-xl p-4 flex flex-col"
         style={{
-          background: 'var(--reigns-bg-soft)',
-          border: '2px solid var(--reigns-ink)',
-          boxShadow: '4px 4px 0 0 var(--reigns-ink)',
+          background: focusCardFill,
+          border: `4px solid ${focusProviderOutline}`,
+          boxShadow: isFocusActive
+            ? `0 0 0 4px ${focusRoleGlow}, 4px 4px 0 0 var(--reigns-ink)`
+            : '4px 4px 0 0 var(--reigns-ink)',
+          color: CARD_TEXT,
         }}
       >
-        <div
-          className="shrink-0 flex items-center justify-center gap-2 font-mono font-bold tracking-[0.2em] uppercase text-xs"
-          style={{ color: 'var(--reigns-ink-soft)' }}
-        >
-          {focus.role === 'undercover'
-            ? <Detective weight="fill" size={14} style={{ color: 'var(--reigns-red)' }} />
-            : <Shield weight="fill" size={14} style={{ color: 'var(--reigns-green)' }} />}
-          {focus.displayName}
+        {/* Name + word header */}
+        <div className="shrink-0 text-center">
+          <div
+            className="flex items-center justify-center gap-2 font-mono font-bold tracking-[0.2em] uppercase text-xs"
+            style={{ color: CARD_TEXT, opacity: 0.85 }}
+          >
+            {focus.role === 'undercover' ? (
+              <Detective weight="fill" size={14} />
+            ) : (
+              <Shield weight="fill" size={14} />
+            )}
+            {focus.displayName}
+          </div>
+          <div
+            className="font-heading text-3xl font-black mt-1"
+            style={{ color: CARD_TEXT }}
+          >
+            {focus.word}
+          </div>
         </div>
 
-        {/* Reasoning — fixed 150px */}
+        {/* Inner Thoughts */}
         <div className="shrink-0 flex flex-col mt-3">
-          <div className="flex items-center gap-1.5 mb-1.5" style={{ color: 'var(--reigns-ink-soft)' }}>
+          <div
+            className="flex items-center gap-1.5 mb-1.5"
+            style={{ color: CARD_TEXT, opacity: 0.75 }}
+          >
             <Brain weight="fill" size={12} />
             <span className="text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
               Inner Thoughts
@@ -253,12 +279,15 @@ export function MainStage({ state }: Props) {
           </div>
         </div>
 
-        {/* Speaking order — label + divider + row */}
+        {/* Speaking order — mini cards */}
         <div
           className="flex-1 min-h-0 mt-4 pt-3 flex flex-col"
-          style={{ borderTop: '2px solid var(--reigns-border-soft)' }}
+          style={{ borderTop: `2px solid ${CARD_TEXT}`, borderTopStyle: 'dashed', borderColor: 'rgba(245,237,219,0.35)' }}
         >
-          <div className="flex items-center gap-1.5 mb-2 shrink-0" style={{ color: 'var(--reigns-ink-soft)' }}>
+          <div
+            className="flex items-center gap-1.5 mb-2 shrink-0"
+            style={{ color: CARD_TEXT, opacity: 0.75 }}
+          >
             <ListNumbers weight="fill" size={12} />
             <span className="text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
               Speaking Order
@@ -266,42 +295,46 @@ export function MainStage({ state }: Props) {
           </div>
           <div className="flex-1 min-h-0 flex items-center justify-center px-2 pb-2">
             <LayoutGroup id="speaking-order">
-              <div className="flex items-center justify-center gap-8 flex-wrap">
-              {buckets.now && (
-                <BucketGroup label="NOW" labelStyle={{ color: 'var(--reigns-gold)' }}>
-                  {[buckets.now].map(p => (
-                    <BucketAvatar key={p.id} player={p} variant="now" />
-                  ))}
-                </BucketGroup>
-              )}
-              {buckets.upNext.length > 0 && (
-                <BucketGroup label="UP NEXT" labelStyle={{ color: 'var(--reigns-ink)' }}>
-                  {buckets.upNext.map(p => (
-                    <BucketAvatar key={p.id} player={p} variant="next" />
-                  ))}
-                </BucketGroup>
-              )}
-              {buckets.done.length > 0 && (
-                <BucketGroup label="DONE" labelStyle={{ color: 'var(--reigns-ink-faint)' }}>
-                  {buckets.done.map(p => (
-                    <BucketAvatar key={p.id} player={p} variant="done" />
-                  ))}
-                </BucketGroup>
-              )}
-              {buckets.skipped.length > 0 && (
-                <BucketGroup label="SKIPPED" labelStyle={{ color: 'var(--reigns-gold)' }}>
-                  {buckets.skipped.map(p => (
-                    <BucketAvatar key={p.id} player={p} variant="skipped" />
-                  ))}
-                </BucketGroup>
-              )}
-              {buckets.out.length > 0 && (
-                <BucketGroup label="OUT" labelStyle={{ color: 'var(--reigns-red)' }}>
-                  {buckets.out.map(p => (
-                    <BucketAvatar key={p.id} player={p} variant="out" />
-                  ))}
-                </BucketGroup>
-              )}
+              <div className="flex items-center justify-center gap-5 flex-wrap">
+                {buckets.now && (
+                  <BucketGroup label="NOW" labelStyle={{ color: 'var(--reigns-gold)' }}>
+                    <BucketCard player={buckets.now} variant="now" />
+                  </BucketGroup>
+                )}
+                {buckets.upNext.length > 0 && (
+                  <BucketGroup label="UP NEXT" labelStyle={{ color: CARD_TEXT }}>
+                    {buckets.upNext.map(p => (
+                      <BucketCard key={p.id} player={p} variant="next" />
+                    ))}
+                  </BucketGroup>
+                )}
+                {buckets.done.length > 0 && (
+                  <BucketGroup
+                    label="DONE"
+                    labelStyle={{ color: CARD_TEXT, opacity: 0.6 }}
+                  >
+                    {buckets.done.map(p => (
+                      <BucketCard key={p.id} player={p} variant="done" />
+                    ))}
+                  </BucketGroup>
+                )}
+                {buckets.skipped.length > 0 && (
+                  <BucketGroup label="SKIPPED" labelStyle={{ color: 'var(--reigns-gold)' }}>
+                    {buckets.skipped.map(p => (
+                      <BucketCard key={p.id} player={p} variant="skipped" />
+                    ))}
+                  </BucketGroup>
+                )}
+                {buckets.out.length > 0 && (
+                  <BucketGroup
+                    label="OUT"
+                    labelStyle={{ color: CARD_TEXT, opacity: 0.6 }}
+                  >
+                    {buckets.out.map(p => (
+                      <BucketCard key={p.id} player={p} variant="out" />
+                    ))}
+                  </BucketGroup>
+                )}
               </div>
             </LayoutGroup>
           </div>

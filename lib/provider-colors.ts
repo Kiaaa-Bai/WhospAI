@@ -5,7 +5,7 @@
  * sit on the warm parchment palette.
  */
 import { providerOf } from './avatars'
-import type { ModelSlug } from './game/types'
+import type { ModelSlug, Role } from './game/types'
 
 const PROVIDER_COLORS: Record<string, { bg: string; ring: string }> = {
   openai:    { bg: 'var(--reigns-openai)',    ring: '#6DAB89' },
@@ -23,3 +23,17 @@ export function providerBg(slug: ModelSlug): string {
 export function providerRing(slug: ModelSlug): string {
   return PROVIDER_COLORS[providerOf(slug)]?.ring ?? '#AAA'
 }
+
+/**
+ * Role-based fill color for card interiors. Matches the civilian / undercover
+ * green / red used elsewhere in the app so all role-coloring is consistent.
+ */
+export function roleFill(role: Role): string {
+  return role === 'undercover' ? 'var(--reigns-red)' : 'var(--reigns-green)'
+}
+
+/**
+ * Cream text color used on top of role-filled cards — tested against both the
+ * green and red fills for legibility.
+ */
+export const CARD_TEXT = '#F5EDDB'
