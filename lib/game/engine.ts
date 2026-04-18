@@ -7,7 +7,11 @@ import { resolveVotes, checkWinCondition } from './scoring'
 import { runDescribe, runVote, runTiebreak } from './phases'
 
 export const MAX_ROUNDS = 6
-const DEFAULT_INTER_CALL_DELAY_MS = 1000
+// Server-side delay between LLM calls. Defaults to 0 so the engine races
+// through every player as fast as the gateway will accept — fast AIs stack
+// up in the client buffer, giving slow AIs more headroom before the user
+// notices a stall.
+const DEFAULT_INTER_CALL_DELAY_MS = 0
 
 function delay(ms: number) {
   if (ms <= 0) return
