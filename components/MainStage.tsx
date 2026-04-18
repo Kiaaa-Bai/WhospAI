@@ -1,6 +1,6 @@
 'use client'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
-import { Brain, Shield, Detective, HourglassMedium } from '@phosphor-icons/react'
+import { Brain, Shield, Detective, HourglassMedium, ListNumbers } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
 import type { GameState } from '@/hooks/useGameReducer'
@@ -185,20 +185,35 @@ export function MainStage({ state }: Props) {
         </div>
         <div className={`shrink-0 text-3xl font-bold mb-3 ${roleAccent}`}>{focus.word}</div>
 
-        {/* Reasoning — fixed 200px so the layout below is stable. */}
-        <div className="shrink-0 h-[200px] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
-          {reasoning || (
-            <span className="italic text-zinc-500 flex items-center gap-1.5">
-              <Brain weight="fill" size={16} /> thinking…
+        {/* Reasoning — fixed 180px (slightly smaller to give room below). */}
+        <div className="shrink-0 flex flex-col">
+          <div className="flex items-center gap-1.5 mb-1.5 text-zinc-500">
+            <Brain weight="fill" size={12} />
+            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
+              Inner Thoughts
             </span>
-          )}
+          </div>
+          <div className="h-[180px] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
+            {reasoning || (
+              <span className="italic text-zinc-500 flex items-center gap-1.5">
+                <Brain weight="fill" size={16} /> thinking…
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Speaking order — borderless, divider line on top, large
+        {/* Speaking order — borderless, label + divider on top, large
             centered row spanning the desk's width. */}
-        <div className="flex-1 min-h-0 mt-4 pt-4 border-t border-zinc-800 flex items-center justify-center overflow-y-auto">
-          <LayoutGroup id="speaking-order">
-            <div className="flex items-end justify-center gap-8 flex-wrap">
+        <div className="flex-1 min-h-0 mt-4 pt-3 border-t border-zinc-800 flex flex-col">
+          <div className="flex items-center gap-1.5 mb-2 text-zinc-500 shrink-0">
+            <ListNumbers weight="fill" size={12} />
+            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
+              Speaking Order
+            </span>
+          </div>
+          <div className="flex-1 min-h-0 flex items-center justify-center px-2 pb-2">
+            <LayoutGroup id="speaking-order">
+              <div className="flex items-center justify-center gap-8 flex-wrap">
               {buckets.now && (
                 <BucketGroup label="NOW" labelClass="text-amber-400">
                   {[buckets.now].map(p => (
@@ -234,8 +249,9 @@ export function MainStage({ state }: Props) {
                   ))}
                 </BucketGroup>
               )}
-            </div>
-          </LayoutGroup>
+              </div>
+            </LayoutGroup>
+          </div>
         </div>
       </div>
     </div>
