@@ -193,7 +193,7 @@ export function MainStage({ state }: Props) {
               Inner Thoughts
             </span>
           </div>
-          <div className="h-[180px] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
+          <div className="h-[150px] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-left text-base leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">
             {reasoning || (
               <span className="italic text-zinc-500 flex items-center gap-1.5">
                 <Brain weight="fill" size={16} /> thinking…
