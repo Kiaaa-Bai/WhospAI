@@ -15,32 +15,46 @@ interface Props {
 
 export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }: Props) {
   const eliminated = player.eliminated
-  const showBubble = currentSpeech || (phase === 'vote' && voteTarget)
   const role = player.role
   const roleAccent = role === 'undercover' ? 'text-red-300' : 'text-emerald-300'
   const RoleIcon = role === 'undercover' ? Detective : Shield
   const roleIconColor = role === 'undercover' ? 'text-red-400' : 'text-emerald-400'
+
+  // Bubble appears ONLY when there's content to show:
+  //  - speaking / spoken: currentSpeech text
+  //  - voted: target avatar
+  // Otherwise the slot is empty (no container, no ellipsis).
+  let bubble: React.ReactNode = null
+  if (!eliminated) {
+    if (voteTarget) {
+      bubble = (
+        <ThoughtBubble
+          targetModelSlug={voteTarget}
+          size="sm"
+          fullWidth
+        />
+      )
+    } else if (currentSpeech) {
+      bubble = (
+        <ThoughtBubble
+          text={currentSpeech}
+          active={isActive && phase !== 'vote'}
+          size="sm"
+          fullWidth
+        />
+      )
+    }
+  }
 
   return (
     <motion.div
       layout
       className="flex flex-col items-center gap-2 w-full relative"
     >
-      {/* Bubble above head — fixed 80px height, always present (empty for
-          eliminated). Text auto-shrinks via ThoughtBubble. */}
-      <div className="flex items-end justify-center w-full">
-        {!eliminated ? (
-          <ThoughtBubble
-            text={currentSpeech}
-            targetModelSlug={phase === 'vote' && voteTarget ? voteTarget : undefined}
-            active={isActive && phase !== 'vote'}
-            ellipsis={!showBubble}
-            size="sm"
-            fullWidth
-          />
-        ) : (
-          <div className="h-20 w-full" />
-        )}
+      {/* Bubble slot — fixed reservation height so the row stays aligned
+          even when some players have no bubble. */}
+      <div className="h-20 w-full flex items-end justify-center">
+        {bubble}
       </div>
 
       {/* Avatar */}
@@ -53,7 +67,7 @@ export function SeatCard({ player, currentSpeech, isActive, voteTarget, phase }:
         )}
       </div>
 
-      {/* Desk: taller, name + word + role icon + p-id badge */}
+      {/* Desk: name + word + role icon + p-id badge */}
       <div className={`relative w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-center min-h-[110px] flex flex-col justify-between ${eliminated ? 'opacity-40' : ''}`}>
         <span className="absolute top-1.5 left-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5">
           {player.id}

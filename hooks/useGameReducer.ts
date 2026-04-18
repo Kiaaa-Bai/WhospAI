@@ -59,6 +59,18 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       return { ...state, order: event.order }
 
     case 'phase':
+      // Entering tiebreak wipes per-round bubble + vote state so leftover
+      // describe-phase content doesn't bleed into the tiebreak. Tied players
+      // will repopulate currentSpeech via their tiebreak speak-start; voters
+      // will repopulate currentRoundVotes via tiebreak vote-cast.
+      if (event.phase === 'tiebreak') {
+        return {
+          ...state,
+          phase: event.phase,
+          currentSpeech: {},
+          currentRoundVotes: {},
+        }
+      }
       return { ...state, phase: event.phase }
 
     case 'speak-start':

@@ -69,9 +69,13 @@ export function MainStage({ state }: Props) {
   const statement = state.currentSpeech[focus.id] ?? ''
 
   // Bubble content selection — bubble is always visible.
-  const isVotePhase = state.phase === 'vote' || state.phase === 'tiebreak'
-  const showAvatarBubble = !isNextUp && isVotePhase && voteTarget
-  const showStatementBubble = !isNextUp && state.phase === 'describe' && statement
+  // - voteTarget present (any phase) → avatar
+  // - currentSpeech present → statement text
+  // - else → ellipsis (always-on placeholder)
+  // This handles tiebreak naturally: tied players keep their tiebreak
+  // statement bubble, voters get avatar after voting, others ellipsis.
+  const showAvatarBubble = !isNextUp && !!voteTarget
+  const showStatementBubble = !isNextUp && !voteTarget && !!statement
   const showEllipsis = !showAvatarBubble && !showStatementBubble
   const order = speakingOrder(state)
 

@@ -26,7 +26,9 @@ export async function POST(req: Request) {
 
   const tts = new MsEdgeTTS()
   try {
-    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
+    // 96 kbps MP3 — twice the bitrate of the default, fewer compression
+    // artifacts and audible "glitches" without changing the codec.
+    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3)
   } catch (err) {
     console.error('[tts] setMetadata failed', { voice, err })
     return new Response(JSON.stringify({ error: `TTS init failed: ${String(err)}` }), {

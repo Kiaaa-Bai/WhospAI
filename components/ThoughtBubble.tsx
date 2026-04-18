@@ -39,7 +39,7 @@ function autoTextSize(text: string, size: 'sm' | 'lg' | 'xl'): string {
 }
 
 function bubbleHeight(size: 'sm' | 'lg' | 'xl'): string {
-  if (size === 'xl') return 'h-60'   // 240px
+  if (size === 'xl') return 'h-44'   // 176px
   if (size === 'lg') return 'h-32'   // 128px
   return 'h-20'                       // 80px
 }
@@ -97,9 +97,11 @@ export function ThoughtBubble({
 
   const widthClass = fullWidth ? 'w-full' : size === 'xl' ? 'max-w-3xl' : ''
   const height = bubbleHeight(size)
+  // No overflow-hidden on the shell so the bottom triangle (positioned
+  // outside the shell) isn't clipped. autoTextSize keeps content fitting.
   const bubble =
     `relative flex items-center justify-center bg-white text-zinc-900 ` +
-    `rounded-2xl border border-zinc-300 overflow-hidden ${padding} ${widthClass} ${height}`
+    `rounded-2xl border border-zinc-300 ${padding} ${widthClass} ${height}`
 
   const avatarSize = size === 'xl' ? 96 : size === 'lg' ? 56 : 32
   const cursorClass = size === 'xl' ? 'w-1.5 h-10' : size === 'lg' ? 'w-1 h-5' : 'w-0.5 h-3'
@@ -120,7 +122,16 @@ export function ThoughtBubble({
           transition={{ duration: 0.8, repeat: Infinity }}
         />
       )}
-      <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-white border-r border-b border-zinc-300 rotate-45" />
+      <span
+        className={
+          `absolute left-1/2 -translate-x-1/2 bg-white border-r border-b border-zinc-300 rotate-45 ` +
+          (size === 'xl'
+            ? '-bottom-2 w-4 h-4'
+            : size === 'lg'
+              ? '-bottom-1.5 w-3.5 h-3.5'
+              : '-bottom-1.5 w-3 h-3')
+        }
+      />
     </div>
   )
 }

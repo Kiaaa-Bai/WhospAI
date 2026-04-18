@@ -1,5 +1,5 @@
 'use client'
-import { HandPointing, HourglassMedium, Skull } from '@phosphor-icons/react'
+import { FilmSlate, HandPointing, HourglassMedium, Scales, Skull } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import type { GameState } from '@/hooks/useGameReducer'
 import type { Player, Statement, Vote } from '@/lib/game/types'
@@ -121,12 +121,15 @@ function Cell({
     }
   }
 
-  const labelText = row.tiebreak ? `R${row.round}t` : `R${row.round}`
+  const LabelIcon = row.tiebreak ? Scales : FilmSlate
   const labelColor = row.tiebreak ? 'text-amber-500' : 'text-zinc-500'
 
   return (
     <div className="text-[11px] leading-tight bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 flex flex-col">
-      <div className={`font-mono text-[10px] ${labelColor}`}>{labelText}</div>
+      <div className={`flex items-center gap-1 text-[10px] font-mono ${labelColor}`}>
+        <LabelIcon weight="fill" size={11} />
+        <span>{row.round}</span>
+      </div>
       <div className="flex-1 text-zinc-300 break-words whitespace-normal min-h-[16px]">
         {statementCell}
       </div>
