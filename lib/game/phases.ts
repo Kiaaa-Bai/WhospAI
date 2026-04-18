@@ -6,8 +6,8 @@ import { buildSystemPrompt, buildDescribePrompt, buildVotePrompt } from './promp
 import { resolveVotes } from './scoring'
 import type { VoteResolution } from './scoring'
 
-const DESCRIBE_TIMEOUT_MS = 12_000
-const VOTE_TIMEOUT_MS = 10_000
+const DESCRIBE_TIMEOUT_MS = 25_000
+const VOTE_TIMEOUT_MS = 20_000
 const RATE_LIMIT_BACKOFF_MS = 3_000
 
 function isRateLimitError(err: unknown): boolean {

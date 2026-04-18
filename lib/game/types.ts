@@ -3,10 +3,10 @@
 export type ModelSlug =
   | 'openai/gpt-5.4-mini'
   | 'anthropic/claude-haiku-4.5'
-  | 'google/gemini-2.5-flash'
+  | 'google/gemini-2.5-flash-lite'
   | 'deepseek/deepseek-v3'
   | 'xai/grok-4.1-fast-non-reasoning'
-  | 'alibaba/qwen3-max'
+  | 'alibaba/qwen3.5-flash'
 
 export type Role = 'civilian' | 'undercover'
 
