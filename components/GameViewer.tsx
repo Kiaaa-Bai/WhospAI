@@ -11,7 +11,7 @@ import { useSpeech } from '@/hooks/useSpeech'
 import { MainStage } from './MainStage'
 import { PanelSeats } from './PanelSeats'
 import { PhaseOverlay } from './PhaseOverlay'
-import { GameOverOverlay } from './GameOverOverlay'
+import { GameOverPage } from './GameOverPage'
 import type { GameConfig } from '@/lib/game/types'
 
 export function GameViewer({
@@ -121,7 +121,14 @@ export function GameViewer({
 
       <PhaseOverlay state={overlay} />
 
-      {state.result && <GameOverOverlay result={state.result} onPlayAgain={onExit} />}
+      {state.result && (
+        <GameOverPage
+          result={state.result}
+          state={state}
+          config={config}
+          onPlayAgain={onExit}
+        />
+      )}
     </div>
   )
 }
