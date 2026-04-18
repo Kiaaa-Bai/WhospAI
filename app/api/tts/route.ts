@@ -26,9 +26,11 @@ export async function POST(req: Request) {
 
   const tts = new MsEdgeTTS()
   try {
-    // 96 kbps MP3 — twice the bitrate of the default, fewer compression
-    // artifacts and audible "glitches" without changing the codec.
-    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3)
+    // Opus in WebM — higher audio quality per bit than MP3, and fewer
+    // decode-time glitches because the codec is newer and the Edge TTS
+    // stream is natively Opus. All modern browsers support <audio> playback
+    // and Web Audio API decodeAudioData for webm/opus.
+    await tts.setMetadata(voice, OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS)
   } catch (err) {
     console.error('[tts] setMetadata failed', { voice, err })
     return new Response(JSON.stringify({ error: `TTS init failed: ${String(err)}` }), {
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
 
   return new Response(webStream, {
     headers: {
-      'Content-Type': 'audio/mpeg',
+      'Content-Type': 'audio/webm',
       'Cache-Control': 'no-store',
     },
   })
