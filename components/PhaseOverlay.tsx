@@ -113,15 +113,13 @@ function RoundStartContent({ item }: { item: OverlayItem }) {
 }
 
 /**
- * Dramatic elimination sequence — shake → flash → red X slams down.
- * Designed to play within the 1500ms overlay hold.
+ * Restrained elimination sequence — quick shake, then a static red X
+ * fades in over a graying avatar. No flash, no cracks, no slam.
  *
  * Timeline (ms):
- *   0-250    avatar enter (scale-in)
+ *   0-250    avatar enter
  *   250-450  shake (4 quick swings)
- *   450-550  white flash
- *   500-900  red X slam (large → normal, with rotation snap)
- *   600-end  avatar grayscale + role label fades in
+ *   450-650  avatar grayscales + red X fades in
  */
 function EliminationContent({ item }: { item: OverlayItem }) {
   const elim = item.eliminated!
@@ -130,11 +128,11 @@ function EliminationContent({ item }: { item: OverlayItem }) {
   return (
     <div className="flex flex-col items-center text-center gap-5">
       <div className="relative">
-        {/* Avatar with shake + grayscale fade */}
+        {/* Avatar: shake then desaturate */}
         <motion.div
           initial={{ filter: 'grayscale(0)' }}
           animate={{
-            x: [0, -12, 12, -10, 10, -6, 6, 0],
+            x: [0, -10, 10, -8, 8, -4, 4, 0],
             filter: [
               'grayscale(0)',
               'grayscale(0)',
@@ -146,60 +144,23 @@ function EliminationContent({ item }: { item: OverlayItem }) {
             ],
           }}
           transition={{
-            x: { duration: 0.45, delay: 0.25, ease: 'easeInOut' },
-            filter: { duration: 0.5, delay: 0.45 },
+            x: { duration: 0.4, delay: 0.25, ease: 'easeInOut' },
+            filter: { duration: 0.4, delay: 0.45 },
           }}
         >
           <Avatar modelSlug={elim.modelSlug} size={200} />
         </motion.div>
 
-        {/* White flash overlay */}
-        <motion.div
-          className="absolute inset-0 rounded-full bg-white"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0, 0.85, 0] }}
-          transition={{
-            duration: 0.5,
-            delay: 0.45,
-            times: [0, 0.2, 0.5, 1],
-            ease: 'easeOut',
-          }}
-        />
-
-        {/* Slamming X */}
+        {/* Static red X — fades in */}
         <motion.div
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          initial={{ scale: 4, opacity: 0, rotate: -25 }}
-          animate={{ scale: [4, 1.1, 1], opacity: [0, 1, 1], rotate: [-25, 5, 0] }}
-          transition={{
-            duration: 0.4,
-            delay: 0.5,
-            times: [0, 0.6, 1],
-            ease: [0.34, 1.56, 0.64, 1],
-          }}
+          initial={{ opacity: 0, scale: 1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.55, ease: 'easeOut' }}
         >
-          <span className="text-red-500 font-black text-[12rem] leading-none drop-shadow-[0_0_24px_rgba(239,68,68,0.6)]">
+          <span className="text-red-500 font-black text-[10rem] leading-none drop-shadow-[0_0_18px_rgba(239,68,68,0.5)]">
             ✕
           </span>
-        </motion.div>
-
-        {/* Crack lines burst from center */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 1] }}
-          transition={{ duration: 0.3, delay: 0.5 }}
-        >
-          {[0, 60, 120, 180, 240, 300].map((deg, idx) => (
-            <motion.span
-              key={idx}
-              className="absolute top-1/2 left-1/2 origin-left h-0.5 bg-red-500/70"
-              style={{ rotate: `${deg}deg`, x: '0%', y: '-50%' }}
-              initial={{ width: 0 }}
-              animate={{ width: '120px' }}
-              transition={{ duration: 0.3, delay: 0.55 + idx * 0.02, ease: 'easeOut' }}
-            />
-          ))}
         </motion.div>
       </div>
 

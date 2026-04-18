@@ -1,6 +1,6 @@
 'use client'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
-import { Brain, Shield, Detective } from '@phosphor-icons/react'
+import { Brain, Shield, Detective, HourglassMedium } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { ThoughtBubble } from './ThoughtBubble'
 import type { GameState } from '@/hooks/useGameReducer'
@@ -25,7 +25,7 @@ function BucketGroup({
   )
 }
 
-type BucketVariant = 'now' | 'next' | 'done' | 'out'
+type BucketVariant = 'now' | 'next' | 'done' | 'skipped' | 'out'
 
 function BucketAvatar({ player, variant }: { player: Player; variant: BucketVariant }) {
   const size = variant === 'now' ? 38 : 28
@@ -33,7 +33,9 @@ function BucketAvatar({ player, variant }: { player: Player; variant: BucketVari
     ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950 rounded-full'
     : ''
   const imgClass =
-    variant === 'out' || variant === 'done' ? 'grayscale opacity-50' : ''
+    variant === 'out' || variant === 'done' || variant === 'skipped'
+      ? 'grayscale opacity-50'
+      : ''
 
   return (
     <motion.div
@@ -47,6 +49,11 @@ function BucketAvatar({ player, variant }: { player: Player; variant: BucketVari
       {variant === 'out' && (
         <span className="absolute inset-0 flex items-center justify-center pointer-events-none text-red-500 text-xl font-bold">
           ✕
+        </span>
+      )}
+      {variant === 'skipped' && (
+        <span className="absolute -bottom-0.5 -right-0.5 bg-zinc-900 rounded-full p-0.5 border border-zinc-700">
+          <HourglassMedium weight="fill" size={10} className="text-amber-500 block" />
         </span>
       )}
     </motion.div>
@@ -67,6 +74,7 @@ interface SpeakingBuckets {
   now: Player | null
   upNext: Player[]
   done: Player[]
+  skipped: Player[]
   out: Player[]
 }
 
@@ -80,13 +88,23 @@ function speakingBuckets(state: GameState): SpeakingBuckets {
     .map(id => state.players.find(p => p.id === id))
     .filter((p): p is Player => !!p && !p.eliminated)
 
-  const spoken = new Set(state.currentStatements.map(s => s.playerId))
+  const isVotePhase = state.phase === 'vote' || state.phase === 'tiebreak'
+  const handledIds = isVotePhase
+    ? new Set(Object.keys(state.currentRoundVotes))
+    : new Set(state.currentStatements.map(s => s.playerId))
+  const skippedIds = new Set(state.currentSkipped)
   const current = state.currentSpeaker
 
+  // Skipped players DON'T appear in DONE; they get their own bucket.
   return {
     now: current ? aliveOrdered.find(p => p.id === current) ?? null : null,
-    upNext: aliveOrdered.filter(p => p.id !== current && !spoken.has(p.id)),
-    done: aliveOrdered.filter(p => p.id !== current && spoken.has(p.id)),
+    upNext: aliveOrdered.filter(
+      p => p.id !== current && !handledIds.has(p.id) && !skippedIds.has(p.id),
+    ),
+    done: aliveOrdered.filter(
+      p => p.id !== current && handledIds.has(p.id) && !skippedIds.has(p.id),
+    ),
+    skipped: aliveOrdered.filter(p => p.id !== current && skippedIds.has(p.id)),
     out: eliminated,
   }
 }
@@ -197,6 +215,13 @@ export function MainStage({ state }: Props) {
                 <BucketGroup label="DONE" labelClass="text-zinc-500">
                   {buckets.done.map(p => (
                     <BucketAvatar key={p.id} player={p} variant="done" />
+                  ))}
+                </BucketGroup>
+              )}
+              {buckets.skipped.length > 0 && (
+                <BucketGroup label="SKIPPED" labelClass="text-amber-500">
+                  {buckets.skipped.map(p => (
+                    <BucketAvatar key={p.id} player={p} variant="skipped" />
                   ))}
                 </BucketGroup>
               )}

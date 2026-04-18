@@ -17,6 +17,8 @@ export interface GameState {
   votes: Vote[]
   reasoningByPlayer: Record<string, string>
   currentRoundVotes: Record<string, string | null>
+  /** Players who failed/abstained this round (describe error or null vote). */
+  currentSkipped: PlayerId[]
   tiedPlayers: PlayerId[]
   lastEliminationTally: Record<string, number> | null
   history: Array<{ round: number; eliminatedId: PlayerId | null; role?: Player['role'] }>
@@ -35,6 +37,7 @@ export const initialGameState: GameState = {
   currentStatements: [],
   votes: [],
   currentRoundVotes: {},
+  currentSkipped: [],
   tiedPlayers: [],
   reasoningByPlayer: {},
   lastEliminationTally: null,
@@ -55,6 +58,7 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
         currentSpeech: {},
         currentStatements: [],
         currentRoundVotes: {},
+        currentSkipped: [],
       }
 
     case 'round-order':
@@ -134,8 +138,15 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
       }
 
     case 'speak-error':
-      // leave currentSpeaker alone; it'll roll over to the next speaker
-      return state
+      // leave currentSpeaker alone; it'll roll over to the next speaker.
+      // Mark the player as skipped so the speaking-order strip can show
+      // them in the SKIPPED bucket (instead of a permanent UP NEXT).
+      return {
+        ...state,
+        currentSkipped: state.currentSkipped.includes(event.playerId)
+          ? state.currentSkipped
+          : [...state.currentSkipped, event.playerId],
+      }
 
     case 'vote-start':
       return {
@@ -157,6 +168,10 @@ export function reduceGameEvent(state: GameState, event: GameEvent): GameState {
           ...state.currentRoundVotes,
           [event.vote.voterId]: event.vote.targetId,
         },
+        currentSkipped:
+          event.vote.targetId === null && !state.currentSkipped.includes(event.vote.voterId)
+            ? [...state.currentSkipped, event.vote.voterId]
+            : state.currentSkipped,
         reasoningByPlayer: {
           ...state.reasoningByPlayer,
           [event.vote.voterId]: event.vote.reasoning,
