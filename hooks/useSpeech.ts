@@ -155,25 +155,74 @@ function createAudioContext(): AudioContext {
   return new Ctor()
 }
 
+/**
+ * Module-level shared AudioContext.
+ *
+ * iOS WebKit (Safari + any iOS browser, including Chrome) requires the
+ * AudioContext to be created AND resumed inside the synchronous call stack
+ * of a user gesture. If we create it later — e.g. on the first TTS preload
+ * — `ctx.resume()` silently stays suspended forever, and every subsequent
+ * `source.start()` schedules audio that never plays.
+ *
+ * Solution: expose `unlockAudioContext()` as a plain export so any user
+ * gesture handler (the Start button on SetupScreen) can prime the context
+ * inside its click stack. The hook then reuses the same singleton.
+ */
+let sharedAudioContext: AudioContext | null = null
+
+function getSharedAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  if (!isWebAudioSupported()) return null
+  if (!sharedAudioContext) {
+    try {
+      sharedAudioContext = createAudioContext()
+    } catch {
+      return null
+    }
+  }
+  return sharedAudioContext
+}
+
+/**
+ * Call this from inside a user-gesture handler (e.g. onClick) BEFORE the
+ * first TTS preload happens. On iOS this is the only way to make audio
+ * playback actually work during the game. No-op if audio is already
+ * running or Web Audio is unsupported.
+ */
+export function unlockAudioContext(): void {
+  const ctx = getSharedAudioContext()
+  if (!ctx) return
+  // resume() must be called inside the gesture stack to succeed on iOS.
+  // We don't await — awaiting would push later operations out of the
+  // gesture. Fire-and-forget is fine; the prime buffer below also helps.
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => { /* noop */ })
+  }
+  // Play a tiny silent buffer to fully unlock the audio system. On some
+  // iOS versions resume() alone is not enough — the first actual playback
+  // has to happen inside the gesture for the context to stay running.
+  try {
+    const buffer = ctx.createBuffer(1, 1, 22050)
+    const src = ctx.createBufferSource()
+    src.buffer = buffer
+    src.connect(ctx.destination)
+    src.start(0)
+  } catch {
+    /* noop */
+  }
+}
+
 export function useSpeech(): SpeechController {
   const supported = isWebAudioSupported()
   const [enabled, setEnabledState] = useState<boolean>(loadInitialEnabled)
   const enabledRef = useRef(enabled)
   useEffect(() => { enabledRef.current = enabled }, [enabled])
 
-  const audioContextRef = useRef<AudioContext | null>(null)
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null)
 
   const getContext = useCallback((): AudioContext | null => {
     if (!supported) return null
-    if (!audioContextRef.current) {
-      try {
-        audioContextRef.current = createAudioContext()
-      } catch {
-        return null
-      }
-    }
-    return audioContextRef.current
+    return getSharedAudioContext()
   }, [supported])
 
   const stopCurrent = useCallback(() => {
@@ -191,12 +240,10 @@ export function useSpeech(): SpeechController {
 
   useEffect(() => {
     return () => {
+      // Don't close the shared AudioContext on unmount — if we did, the
+      // user would need another gesture to unlock it next game. Just stop
+      // the currently-playing source.
       stopCurrent()
-      const ctx = audioContextRef.current
-      if (ctx) {
-        try { ctx.close() } catch { /* noop */ }
-        audioContextRef.current = null
-      }
     }
   }, [stopCurrent])
 
@@ -277,7 +324,14 @@ export function useSpeech(): SpeechController {
           const ctx = getContext()
           if (!ctx) return
           if (ctx.state === 'suspended') {
-            try { await ctx.resume() } catch { /* noop */ }
+            // iOS WebKit can leave resume() pending forever when no user
+            // gesture is on the stack. Race it with a short timeout so the
+            // playback queue never hangs — worst case we try to start the
+            // source while suspended and move on via the onended timeout.
+            await Promise.race([
+              ctx.resume().catch(() => {}),
+              new Promise<void>(resolve => setTimeout(resolve, 500)),
+            ])
           }
 
           // Stop any currently playing source before starting a new one.
@@ -290,22 +344,26 @@ export function useSpeech(): SpeechController {
 
           return new Promise<void>(resolve => {
             let settled = false
-            source.onended = () => {
+            // Hard timeout: if onended never fires (suspended context, iOS
+            // quirks, mid-play page visibility changes), fall back to the
+            // buffer's own duration + 500ms slack so the game advances.
+            const timeoutMs = Math.ceil((buffer.duration + 0.5) * 1000)
+            const settle = () => {
               if (settled) return
               settled = true
+              clearTimeout(timer)
               if (currentSourceRef.current === source) {
                 currentSourceRef.current = null
               }
               try { source.disconnect() } catch { /* noop */ }
               resolve()
             }
+            const timer = setTimeout(settle, timeoutMs)
+            source.onended = settle
             try {
               source.start(0)
             } catch {
-              if (!settled) {
-                settled = true
-                resolve()
-              }
+              settle()
             }
           })
         },

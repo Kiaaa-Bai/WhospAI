@@ -10,6 +10,7 @@ import { ROSTER } from '@/lib/game/roster'
 import { WORD_PAIRS } from '@/data/word-pairs'
 import { providerBg } from '@/lib/provider-colors'
 import { useLang, type Lang } from '@/lib/i18n'
+import { unlockAudioContext } from '@/hooks/useSpeech'
 import type { GameConfig } from '@/lib/game/types'
 
 const PLACEHOLDERS: Record<Lang, { civilian: string; undercover: string }> = {
@@ -300,13 +301,20 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
             <button
               className="pixel-btn pixel-btn-danger w-full py-3 md:py-4 text-sm md:text-base"
               disabled={!valid}
-              onClick={() =>
+              onClick={() => {
+                // Unlock the Web Audio context INSIDE the user gesture
+                // stack. Required for iOS WebKit (Safari + iOS Chrome) to
+                // ever actually play TTS audio during the game — without
+                // this, ctx.resume() silently stays suspended and every
+                // source.start() schedules audio that never hits the
+                // speakers.
+                unlockAudioContext()
                 onStart({
                   civilianWord: civilianWord.trim(),
                   undercoverWord: undercoverWord.trim(),
                   language: lang,
                 })
-              }
+              }}
             >
               <Play weight="fill" size={18} />
               {playExhausted ? t('setup.quota_used_up') : t('setup.start')}

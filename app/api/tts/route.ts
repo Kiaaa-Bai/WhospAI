@@ -35,11 +35,13 @@ export async function POST(req: Request) {
 
   const tts = new MsEdgeTTS()
   try {
-    // Opus in WebM — higher audio quality per bit than MP3, and fewer
-    // decode-time glitches because the codec is newer and the Edge TTS
-    // stream is natively Opus. All modern browsers support <audio> playback
-    // and Web Audio API decodeAudioData for webm/opus.
-    await tts.setMetadata(voice, OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS)
+    // MP3, not Opus/WebM. iOS WebKit's decodeAudioData cannot decode
+    // Opus-in-WebM — the promise rejects silently and audio never plays
+    // (observed on iPhone Chrome, which is WebKit under the hood). MP3 is
+    // the universally-supported decodeAudioData format. We already fully
+    // decode the blob before play via Web Audio, so MP3 vs Opus has no
+    // buffer-underrun tradeoff here.
+    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
   } catch (err) {
     console.error('[tts] setMetadata failed', { voice, textLen: text.length, err: String(err) })
     return new Response(JSON.stringify({ error: `TTS init failed: ${String(err)}` }), {
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
 
   return new Response(webStream, {
     headers: {
-      'Content-Type': 'audio/webm',
+      'Content-Type': 'audio/mpeg',
       'Cache-Control': 'no-store',
     },
   })
