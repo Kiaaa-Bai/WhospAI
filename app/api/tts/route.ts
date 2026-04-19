@@ -24,6 +24,15 @@ export async function POST(req: Request) {
 
   const { text, voice } = parsed
 
+  // Breadcrumb: log every request with a small fingerprint. Lets us
+  // correlate "this model went silent" with the exact voice + text length
+  // in Vercel runtime logs.
+  const startedAt = Date.now()
+  const textPreview = text.slice(0, 40).replace(/\s+/g, ' ')
+  console.log(
+    `[tts] req voice=${voice} len=${text.length} preview="${textPreview}${text.length > 40 ? '…' : ''}"`,
+  )
+
   const tts = new MsEdgeTTS()
   try {
     // Opus in WebM — higher audio quality per bit than MP3, and fewer
@@ -32,7 +41,7 @@ export async function POST(req: Request) {
     // and Web Audio API decodeAudioData for webm/opus.
     await tts.setMetadata(voice, OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS)
   } catch (err) {
-    console.error('[tts] setMetadata failed', { voice, err })
+    console.error('[tts] setMetadata failed', { voice, textLen: text.length, err: String(err) })
     return new Response(JSON.stringify({ error: `TTS init failed: ${String(err)}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -41,15 +50,34 @@ export async function POST(req: Request) {
 
   const { audioStream } = tts.toStream(text)
 
-  // Stream MP3 bytes to the client as they arrive. Convert Node Readable →
-  // Web ReadableStream so Next.js can return it.
+  // Track whether any bytes actually flowed through. An Edge TTS silent
+  // failure manifests as an immediate 'end' with zero bytes — very useful
+  // to distinguish from genuine long-tail successes.
+  let bytesSeen = 0
+  audioStream.on('data', (chunk: Buffer) => {
+    bytesSeen += chunk.length
+  })
+
+  // Stream bytes to the client as they arrive. Convert Node Readable → Web
+  // ReadableStream so Next.js can return it.
   const webStream = Readable.toWeb(audioStream) as unknown as ReadableStream<Uint8Array>
 
-  // Close the TTS WebSocket once the stream ends or the client disconnects.
   audioStream.on('end', () => {
+    const ms = Date.now() - startedAt
+    if (bytesSeen === 0) {
+      console.error(
+        `[tts] empty-stream voice=${voice} len=${text.length} ms=${ms} — Edge TTS returned zero bytes`,
+      )
+    } else {
+      console.log(`[tts] ok voice=${voice} len=${text.length} bytes=${bytesSeen} ms=${ms}`)
+    }
     try { tts.close() } catch { /* noop */ }
   })
-  audioStream.on('error', () => {
+  audioStream.on('error', (err: Error) => {
+    const ms = Date.now() - startedAt
+    console.error(
+      `[tts] stream-error voice=${voice} len=${text.length} bytes=${bytesSeen} ms=${ms} err=${String(err)}`,
+    )
     try { tts.close() } catch { /* noop */ }
   })
 

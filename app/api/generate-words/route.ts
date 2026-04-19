@@ -1,6 +1,7 @@
 // app/api/generate-words/route.ts
 import { z } from 'zod'
 import { generateText, Output } from 'ai'
+import { hitRateLimit, ipFromRequest } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -126,6 +127,30 @@ cliché pairs. Be creative but keep it recognizable.`
 }
 
 export async function POST(req: Request) {
+  // Rate limit first — cheap path before we burn the LLM budget.
+  const ip = ipFromRequest(req)
+  const limit = await hitRateLimit(ip, 'gen')
+  if (!limit.ok) {
+    return new Response(
+      JSON.stringify({
+        error: 'Hourly AI-pick limit reached. Try again later.',
+        code: 'rate_limited',
+        remaining: 0,
+        limit: limit.limit,
+        resetAt: limit.resetAt,
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RateLimit-Limit': String(limit.limit),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(limit.resetAt),
+        },
+      },
+    )
+  }
+
   let parsed
   try {
     parsed = RequestSchema.parse(await req.json())

@@ -89,6 +89,7 @@ async function fetchBlobWithRetry(
   voice: string,
   signal: AbortSignal,
 ): Promise<Blob | null> {
+  const short = text.slice(0, 20).replace(/\s+/g, ' ')
   for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
     if (signal.aborted) return null
     if (attempt > 0) {
@@ -102,11 +103,29 @@ async function fetchBlobWithRetry(
         body: JSON.stringify({ text, voice }),
         signal,
       })
-      if (res.ok) return await res.blob()
-    } catch {
-      /* try again */
+      if (res.ok) {
+        const blob = await res.blob()
+        if (blob.size === 0) {
+          console.warn(
+            `[tts] empty blob voice=${voice} len=${text.length} attempt=${attempt} "${short}…"`,
+          )
+          continue
+        }
+        return blob
+      }
+      console.warn(
+        `[tts] http ${res.status} voice=${voice} len=${text.length} attempt=${attempt} "${short}…"`,
+      )
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return null
+      console.warn(
+        `[tts] fetch err voice=${voice} len=${text.length} attempt=${attempt} err=${String(err)}`,
+      )
     }
   }
+  console.error(
+    `[tts] give-up voice=${voice} len=${text.length} "${short}…" — all ${RETRY_DELAYS.length} attempts failed`,
+  )
   return null
 }
 

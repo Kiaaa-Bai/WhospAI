@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Shield, Detective, Sparkle, Shuffle, Play, MagicWand, CaretRight,
+  Shield, Detective, Sparkle, Shuffle, Play, MagicWand, CaretRight, Timer,
 } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
 import { LangSwitcher } from './LangSwitcher'
@@ -23,19 +23,45 @@ const PLACEHOLDERS: Record<Lang, { civilian: string; undercover: string }> = {
   ru: { civilian: 'яблоко',  undercover: 'груша' },
 }
 
+interface Quota {
+  play: { remaining: number; limit: number; resetAt: number }
+  gen: { remaining: number; limit: number; resetAt: number }
+  enforced: boolean
+}
+
 export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void }) {
   const { lang, t } = useLang()
   const [civilianWord, setCivilianWord] = useState('')
   const [undercoverWord, setUndercoverWord] = useState('')
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
+  const [quota, setQuota] = useState<Quota | null>(null)
 
-  const valid =
+  // Pre-fetch remaining quota so we can disable the start button and warn
+  // the user upfront instead of letting them hit a 429 surprise.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/quota', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!cancelled && data) setQuota(data as Quota)
+      })
+      .catch(() => { /* offline or transient — silently skip */ })
+    return () => { cancelled = true }
+  }, [])
+
+  const playRemaining = quota?.play.remaining ?? null
+  const genRemaining = quota?.gen.remaining ?? null
+  const playExhausted = quota?.enforced === true && playRemaining === 0
+  const genExhausted = quota?.enforced === true && genRemaining === 0
+
+  const inputValid =
     civilianWord.trim().length > 0 &&
     undercoverWord.trim().length > 0 &&
     civilianWord.trim() !== undercoverWord.trim() &&
     civilianWord.length <= 30 &&
     undercoverWord.length <= 30
+  const valid = inputValid && !playExhausted
 
   async function generate() {
     setGenerating(true)
@@ -53,6 +79,11 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
       const data = await res.json()
       setCivilianWord(data.civilian)
       setUndercoverWord(data.undercover)
+      // Refresh the quota counter so the remaining badge ticks down live.
+      fetch('/api/quota', { cache: 'no-store' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => { if (d) setQuota(d as Quota) })
+        .catch(() => { /* ignore */ })
     } catch (err) {
       setGenError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -194,7 +225,7 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
             />
             <button
               onClick={generate}
-              disabled={generating}
+              disabled={generating || genExhausted}
               className="pixel-btn pixel-btn-primary w-full py-2.5 md:py-3 text-xs md:text-sm"
             >
               {generating ? (
@@ -224,6 +255,15 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                 }}
               >
                 {genError}
+              </div>
+            )}
+            {genRemaining != null && quota?.enforced && (
+              <div
+                className="text-[10px] font-mono flex items-center gap-1.5"
+                style={{ color: genExhausted ? 'var(--reigns-red)' : 'var(--reigns-ink-soft)' }}
+              >
+                <Timer weight="fill" size={11} />
+                {t('setup.gen_remaining', { remaining: genRemaining, limit: quota.gen.limit })}
               </div>
             )}
           </div>
@@ -268,14 +308,26 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
               }
             >
               <Play weight="fill" size={18} />
-              {t('setup.start')}
+              {playExhausted ? t('setup.quota_used_up') : t('setup.start')}
               <CaretRight weight="fill" size={16} />
             </button>
             <div
-              className="text-[10px] text-center mt-2 font-mono"
-              style={{ color: 'var(--reigns-ink-faint)' }}
+              className="text-[10px] text-center mt-2 font-mono flex items-center justify-center gap-1.5"
+              style={{
+                color: playExhausted ? 'var(--reigns-red)' : 'var(--reigns-ink-faint)',
+              }}
             >
-              {t('setup.caption')}
+              {playRemaining != null && quota?.enforced ? (
+                <>
+                  <Timer weight="fill" size={11} />
+                  {t('setup.play_remaining', {
+                    remaining: playRemaining,
+                    limit: quota.play.limit,
+                  })}
+                </>
+              ) : (
+                t('setup.caption')
+              )}
             </div>
           </div>
         </div>
