@@ -16,22 +16,31 @@ type ProviderVoices = {
   ja: string
 }
 
-// Edge TTS "ShortName" values. Full catalog:
-// https://speech.microsoft.com/portal/voicegallery
+// Edge TTS "ShortName" values. Must be pulled from the `msedge-tts` endpoint,
+// NOT the full Azure Speech catalog — Edge exposes a strict subset and silently
+// returns HTTP 200 with zero bytes for voices that aren't available (no 4xx).
 //
-// NOTE: Microsoft silently deprecates voices — a retired voice doesn't 4xx,
-// it returns HTTP 200 with zero audio bytes. Two previously-used voices
-// (zh-CN-XiaohanNeural, zh-CN-XiaomengNeural) were dropped in late 2024,
-// which manifested as xai/alibaba going mute in Chinese games. If a new
-// voice goes silent in future, check whether it was retired at
-// https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support
+// To audit the live catalog: `pnpm exec tsx scripts/list-voices.mjs`
+//
+// Currently-available zh-CN voices (as of 2026-04-19): Xiaoxiao, Xiaoyi,
+// Yunjian, Yunxi, Yunxia, Yunyang, plus two dialect voices
+// (liaoning-Xiaobei, shaanxi-Xiaoni).
+//
+// Currently-available ja-JP voices: only Keita and Nanami. Models share.
+//
+// Past incidents:
+//   - 2024 late: zh-CN-XiaohanNeural + zh-CN-XiaomengNeural retired,
+//     manifested as xai/alibaba going mute
+//   - 2026-04-19: zh-CN-YunzeNeural + zh-CN-XiaochenNeural swap turned out
+//     to be Azure-only (never available on Edge endpoint) — same silent
+//     failure. Use scripts/list-voices.mjs first before adding any new voice.
 const VOICES: Record<string, ProviderVoices> = {
   openai:    { en: 'en-US-AriaNeural',         zh: 'zh-CN-XiaoxiaoNeural', ja: 'ja-JP-NanamiNeural' },
   anthropic: { en: 'en-US-GuyNeural',          zh: 'zh-CN-YunyangNeural',  ja: 'ja-JP-KeitaNeural'  },
   google:    { en: 'en-US-JennyNeural',        zh: 'zh-CN-XiaoyiNeural',   ja: 'ja-JP-NanamiNeural' },
   deepseek:  { en: 'en-US-BrianNeural',        zh: 'zh-CN-YunxiNeural',    ja: 'ja-JP-KeitaNeural'  },
-  xai:       { en: 'en-US-ChristopherNeural',  zh: 'zh-CN-YunzeNeural',    ja: 'ja-JP-KeitaNeural'  },
-  alibaba:   { en: 'en-US-EmmaNeural',         zh: 'zh-CN-XiaochenNeural', ja: 'ja-JP-NanamiNeural' },
+  xai:       { en: 'en-US-ChristopherNeural',  zh: 'zh-CN-YunjianNeural',  ja: 'ja-JP-KeitaNeural'  },
+  alibaba:   { en: 'en-US-EmmaNeural',         zh: 'zh-CN-YunxiaNeural',   ja: 'ja-JP-NanamiNeural' },
 }
 
 const FALLBACK: ProviderVoices = {
