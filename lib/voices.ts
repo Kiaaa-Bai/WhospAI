@@ -1,68 +1,162 @@
 /**
  * Voice mapping for Edge TTS playback.
  *
- * Each provider gets a stable English voice and a stable Chinese voice.
- * When speaking, the voice is picked based on the language of the text
- * (inferred from characters). Japanese has a small shared fallback set.
+ * Edge's TTS endpoint (what `msedge-tts` connects to) exposes a strict
+ * subset of the full Azure Speech catalog. Always verify voices are in
+ * the live subset — `pnpm exec tsx scripts/list-voices.mjs` prints the
+ * current list. Voices in Azure but not Edge return HTTP 200 with 0
+ * audio bytes.
+ *
+ * Per-language availability (as of 2026-04-19):
+ *   en: 17 voices           → per-provider
+ *   zh: 6 standard + 2 dialect → per-provider
+ *   ja: 2 voices             → per-provider, but 6 providers share 2 voices
+ *   es: 7 voices             → per-provider
+ *   fr: 9 voices             → per-provider
+ *   de: 6 voices             → per-provider (exactly enough)
+ *   ko: 3 voices             → single shared voice (too few for variety)
+ *   ru: 2 voices             → single shared voice (too few for variety)
  */
 import type { ModelSlug } from './game/types'
 import { providerOf } from './avatars'
 
-export type Lang = 'en' | 'zh' | 'ja' | 'other'
+export type Lang =
+  | 'en' | 'zh' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'ru' | 'other'
 
-type ProviderVoices = {
-  en: string
-  zh: string
-  ja: string
+type Provider = 'openai' | 'anthropic' | 'google' | 'deepseek' | 'xai' | 'alibaba'
+
+/**
+ * Per-provider voice table for languages with enough Edge TTS voices
+ * that each of our 6 providers can get a distinct character. ja has only
+ * 2 voices so it alternates Keita/Nanami across providers.
+ */
+const PER_PROVIDER: Partial<Record<Lang, Record<Provider, string>>> = {
+  en: {
+    openai:    'en-US-AriaNeural',
+    anthropic: 'en-US-GuyNeural',
+    google:    'en-US-JennyNeural',
+    deepseek:  'en-US-BrianNeural',
+    xai:       'en-US-ChristopherNeural',
+    alibaba:   'en-US-EmmaNeural',
+  },
+  zh: {
+    openai:    'zh-CN-XiaoxiaoNeural',
+    anthropic: 'zh-CN-YunyangNeural',
+    google:    'zh-CN-XiaoyiNeural',
+    deepseek:  'zh-CN-YunxiNeural',
+    xai:       'zh-CN-YunjianNeural',
+    alibaba:   'zh-CN-YunxiaNeural',
+  },
+  ja: {
+    // Only Keita (M) and Nanami (F) exist — alternate for a little variety.
+    openai:    'ja-JP-NanamiNeural',
+    anthropic: 'ja-JP-KeitaNeural',
+    google:    'ja-JP-NanamiNeural',
+    deepseek:  'ja-JP-KeitaNeural',
+    xai:       'ja-JP-KeitaNeural',
+    alibaba:   'ja-JP-NanamiNeural',
+  },
+  es: {
+    openai:    'es-ES-ElviraNeural',
+    anthropic: 'es-ES-AlvaroNeural',
+    google:    'es-MX-DaliaNeural',
+    deepseek:  'es-US-AlonsoNeural',
+    xai:       'es-MX-JorgeNeural',
+    alibaba:   'es-US-PalomaNeural',
+  },
+  fr: {
+    openai:    'fr-FR-DeniseNeural',
+    anthropic: 'fr-FR-HenriNeural',
+    google:    'fr-FR-EloiseNeural',
+    deepseek:  'fr-FR-RemyMultilingualNeural',
+    xai:       'fr-CA-ThierryNeural',
+    alibaba:   'fr-FR-VivienneMultilingualNeural',
+  },
+  de: {
+    openai:    'de-DE-KatjaNeural',
+    anthropic: 'de-DE-ConradNeural',
+    google:    'de-DE-AmalaNeural',
+    deepseek:  'de-DE-FlorianMultilingualNeural',
+    xai:       'de-DE-KillianNeural',
+    alibaba:   'de-DE-SeraphinaMultilingualNeural',
+  },
 }
 
-// Edge TTS "ShortName" values. Must be pulled from the `msedge-tts` endpoint,
-// NOT the full Azure Speech catalog — Edge exposes a strict subset and silently
-// returns HTTP 200 with zero bytes for voices that aren't available (no 4xx).
-//
-// To audit the live catalog: `pnpm exec tsx scripts/list-voices.mjs`
-//
-// Currently-available zh-CN voices (as of 2026-04-19): Xiaoxiao, Xiaoyi,
-// Yunjian, Yunxi, Yunxia, Yunyang, plus two dialect voices
-// (liaoning-Xiaobei, shaanxi-Xiaoni).
-//
-// Currently-available ja-JP voices: only Keita and Nanami. Models share.
-//
-// Past incidents:
-//   - 2024 late: zh-CN-XiaohanNeural + zh-CN-XiaomengNeural retired,
-//     manifested as xai/alibaba going mute
-//   - 2026-04-19: zh-CN-YunzeNeural + zh-CN-XiaochenNeural swap turned out
-//     to be Azure-only (never available on Edge endpoint) — same silent
-//     failure. Use scripts/list-voices.mjs first before adding any new voice.
-const VOICES: Record<string, ProviderVoices> = {
-  openai:    { en: 'en-US-AriaNeural',         zh: 'zh-CN-XiaoxiaoNeural', ja: 'ja-JP-NanamiNeural' },
-  anthropic: { en: 'en-US-GuyNeural',          zh: 'zh-CN-YunyangNeural',  ja: 'ja-JP-KeitaNeural'  },
-  google:    { en: 'en-US-JennyNeural',        zh: 'zh-CN-XiaoyiNeural',   ja: 'ja-JP-NanamiNeural' },
-  deepseek:  { en: 'en-US-BrianNeural',        zh: 'zh-CN-YunxiNeural',    ja: 'ja-JP-KeitaNeural'  },
-  xai:       { en: 'en-US-ChristopherNeural',  zh: 'zh-CN-YunjianNeural',  ja: 'ja-JP-KeitaNeural'  },
-  alibaba:   { en: 'en-US-EmmaNeural',         zh: 'zh-CN-YunxiaNeural',   ja: 'ja-JP-NanamiNeural' },
+/**
+ * Languages with fewer than 6 voices on Edge TTS — all providers share
+ * a single voice. Less "character" per model, but matching the remote
+ * reality instead of pretending.
+ */
+const SHARED: Partial<Record<Lang, string>> = {
+  ko: 'ko-KR-SunHiNeural',
+  ru: 'ru-RU-DmitryNeural',
 }
 
-const FALLBACK: ProviderVoices = {
-  en: 'en-US-AriaNeural',
-  zh: 'zh-CN-XiaoxiaoNeural',
-  ja: 'ja-JP-NanamiNeural',
-}
+const ENGLISH_POOL = PER_PROVIDER.en!
 
+/**
+ * Infer language from text by character range. Works for scripts with
+ * distinct Unicode blocks (CJK, Hangul, Cyrillic, kana). Latin-alphabet
+ * languages (es/fr/de) all look like 'en' and must be disambiguated by
+ * the caller-provided `gameLanguage`.
+ */
 export function detectTextLanguage(text: string): Lang {
-  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return 'ja'
-  if (/[\uac00-\ud7af]/.test(text)) return 'other'
-  if (/[\u4e00-\u9fff\u3400-\u4dbf]/.test(text)) return 'zh'
-  if (/[a-z]/i.test(text)) return 'en'
+  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return 'ja'        // hiragana / katakana
+  if (/[\uac00-\ud7af]/.test(text)) return 'ko'                     // hangul
+  if (/[\u0400-\u04ff]/.test(text)) return 'ru'                     // cyrillic
+  if (/[\u4e00-\u9fff\u3400-\u4dbf]/.test(text)) return 'zh'        // CJK ideographs
+  if (/[a-z]/i.test(text)) return 'en'                              // latin
   return 'other'
 }
 
-export function voiceFor(modelSlug: ModelSlug, text: string): string {
-  const provider = providerOf(modelSlug)
-  const lang = detectTextLanguage(text)
-  const entry = VOICES[provider] ?? FALLBACK
-  if (lang === 'ja') return entry.ja
-  if (lang === 'zh') return entry.zh
-  // en or other → use English voice
-  return entry.en
+/**
+ * Pick the Edge TTS voice for a player's speech.
+ *
+ * `gameLanguage` — when provided — overrides character-based detection
+ * for Latin-alphabet cases (es/fr/de). CJK/Hangul/Cyrillic detection is
+ * trusted either way so that a stray English word mid-game still reads
+ * in an English voice.
+ */
+export function voiceFor(
+  modelSlug: ModelSlug,
+  text: string,
+  gameLanguage?: Lang,
+): string {
+  const provider = providerOf(modelSlug) as Provider
+  let lang = detectTextLanguage(text)
+
+  if (gameLanguage && lang === 'en'
+      && (gameLanguage === 'es' || gameLanguage === 'fr' || gameLanguage === 'de')) {
+    lang = gameLanguage
+  }
+
+  const perProvider = PER_PROVIDER[lang]
+  if (perProvider) return perProvider[provider] ?? ENGLISH_POOL[provider]
+
+  const shared = SHARED[lang]
+  if (shared) return shared
+
+  return ENGLISH_POOL[provider] ?? 'en-US-AriaNeural'
+}
+
+/**
+ * "I vote for {name}." localized into the game's language.
+ * Short TTS clip played after a vote is committed. Requires explicit
+ * `gameLanguage` because the voter's own word isn't enough to
+ * distinguish es/fr/de (all Latin).
+ */
+export function voteAnnouncementText(
+  targetName: string,
+  gameLanguage: Lang,
+): string {
+  switch (gameLanguage) {
+    case 'zh': return `我投票给 ${targetName}。`
+    case 'ja': return `${targetName} に投票します。`
+    case 'ko': return `${targetName}에게 투표합니다.`
+    case 'es': return `Voto por ${targetName}.`
+    case 'fr': return `Je vote pour ${targetName}.`
+    case 'de': return `Ich stimme für ${targetName}.`
+    case 'ru': return `Я голосую за ${targetName}.`
+    default:   return `I vote for ${targetName}.`
+  }
 }

@@ -1,8 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef } from 'react'
-import type { GameEvent, ModelSlug, Player, PlayerId } from '@/lib/game/types'
+import type { GameEvent, GameLanguage, ModelSlug, Player, PlayerId } from '@/lib/game/types'
 import type { PreparedSpeech } from './useSpeech'
-import { detectTextLanguage } from '@/lib/voices'
+import { detectTextLanguage, voteAnnouncementText, type Lang as VoiceLang } from '@/lib/voices'
 
 const REASONING_MS_PER_CHAR = 40    // 25 chars/s
 const STATEMENT_MS_PER_CHAR = 40    // 25 chars/s
@@ -56,20 +56,22 @@ interface PassItem {
 
 type QueueItem = TurnItem | PassItem
 
-type SpeakFn = (text: string, modelSlug: ModelSlug) => Promise<void>
-type PrepareFn = (text: string, modelSlug: ModelSlug) => PreparedSpeech
+type SpeakFn = (text: string, modelSlug: ModelSlug, gameLanguage?: VoiceLang) => Promise<void>
+type PrepareFn = (text: string, modelSlug: ModelSlug, gameLanguage?: VoiceLang) => PreparedSpeech
 
-function voteAnnouncement(word: string, targetName: string): string {
-  const lang = detectTextLanguage(word)
-  if (lang === 'zh') return `我投票给 ${targetName}。`
-  if (lang === 'ja') return `${targetName} に投票します。`
-  return `I vote for ${targetName}.`
+/**
+ * Fallback voter-word → VoiceLang when no game language is passed
+ * (legacy call path / tests). Character-based detection only.
+ */
+function fallbackLang(word: string): VoiceLang {
+  return detectTextLanguage(word)
 }
 
 export function usePlaybackDispatch(
   dispatch: (e: GameEvent) => void,
   speak?: SpeakFn,
   prepare?: PrepareFn,
+  gameLanguage?: GameLanguage,
 ): (e: GameEvent) => void {
   const queueRef = useRef<QueueItem[]>([])
   const runningRef = useRef(false)
@@ -79,8 +81,10 @@ export function usePlaybackDispatch(
   // Refs so the stable `drain` closure reaches the latest callbacks.
   const speakRef = useRef<SpeakFn | undefined>(speak)
   const prepareRef = useRef<PrepareFn | undefined>(prepare)
+  const langRef = useRef<GameLanguage | undefined>(gameLanguage)
   useEffect(() => { speakRef.current = speak }, [speak])
   useEffect(() => { prepareRef.current = prepare }, [prepare])
+  useEffect(() => { langRef.current = gameLanguage }, [gameLanguage])
 
   useEffect(() => {
     abortedRef.current = false
@@ -121,7 +125,7 @@ export function usePlaybackDispatch(
       const fn = speakRef.current
       const slug = slugsRef.current.get(playerId)
       if (!fn || !slug || !text) return Promise.resolve()
-      return fn(text, slug)
+      return fn(text, slug, langRef.current)
     },
     [],
   )
@@ -230,18 +234,24 @@ export function usePlaybackDispatch(
     const prep = prepareRef.current
     const slug = slugsRef.current.get(turn.playerId)
     if (!prep || !slug) return
+    const lang: VoiceLang = langRef.current ?? (
+      turn.think ? fallbackLang(turn.think) : 'en'
+    )
     if (turn.think) {
-      turn.thinkSpeech = prep(turn.think, slug)
+      turn.thinkSpeech = prep(turn.think, slug, lang)
     }
     if (turn.phase === 'describe' && turn.speak) {
-      turn.speakSpeech = prep(turn.speak, slug)
+      turn.speakSpeech = prep(turn.speak, slug, lang)
     }
     if (turn.phase === 'vote' && turn.voteTargetId) {
       const voter = playersRef.current.get(turn.playerId)
       const target = playersRef.current.get(turn.voteTargetId)
       if (voter && target) {
-        const line = voteAnnouncement(voter.word, target.displayName)
-        turn.voteAnnouncementSpeech = prep(line, slug)
+        // Vote announcement lang: prefer the game-wide language, fall back to
+        // inferring from the voter's word (handles legacy / test cases).
+        const voteLang: VoiceLang = langRef.current ?? fallbackLang(voter.word)
+        const line = voteAnnouncementText(target.displayName, voteLang)
+        turn.voteAnnouncementSpeech = prep(line, slug, voteLang)
       }
     }
   }

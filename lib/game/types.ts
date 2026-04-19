@@ -43,9 +43,23 @@ export interface Vote {
   tiebreak?: boolean
 }
 
+/**
+ * Subset of supported UI languages — mirrors the dictionary in lib/i18n.tsx
+ * and scripts/list-voices.mjs. Kept as a literal union here (rather than
+ * imported) so `lib/game/*` doesn't depend on client-only i18n code.
+ */
+export type GameLanguage =
+  | 'en' | 'zh' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'ru'
+
 export interface GameConfig {
   civilianWord: string
   undercoverWord: string
+  /**
+   * Language chosen at setup time. Used client-side for TTS voice routing
+   * (Latin-alphabet langs can't be disambiguated from character detection
+   * alone) and for the localized "I vote for X" announcement.
+   */
+  language?: GameLanguage
 }
 
 export interface GameResult {

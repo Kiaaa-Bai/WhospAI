@@ -304,6 +304,7 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                 onStart({
                   civilianWord: civilianWord.trim(),
                   undercoverWord: undercoverWord.trim(),
+                  language: lang,
                 })
               }
             >

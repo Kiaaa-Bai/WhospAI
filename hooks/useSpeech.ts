@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { voiceFor } from '@/lib/voices'
+import { voiceFor, type Lang as VoiceLang } from '@/lib/voices'
 import type { ModelSlug } from '@/lib/game/types'
 
 const STORAGE_KEY = 'whospy:tts-enabled'
@@ -68,8 +68,8 @@ export interface SpeechController {
   supported: boolean
   enabled: boolean
   setEnabled: (on: boolean) => void
-  speak: (text: string, modelSlug: ModelSlug) => Promise<void>
-  prepare: (text: string, modelSlug: ModelSlug) => PreparedSpeech
+  speak: (text: string, modelSlug: ModelSlug, gameLanguage?: VoiceLang) => Promise<void>
+  prepare: (text: string, modelSlug: ModelSlug, gameLanguage?: VoiceLang) => PreparedSpeech
   cancel: () => void
 }
 
@@ -209,14 +209,14 @@ export function useSpeech(): SpeechController {
   }, [stopCurrent])
 
   const prepare = useCallback(
-    (text: string, modelSlug: ModelSlug): PreparedSpeech => {
+    (text: string, modelSlug: ModelSlug, gameLanguage?: VoiceLang): PreparedSpeech => {
       const noop: PreparedSpeech = {
         play: () => Promise.resolve(),
         cancel: () => {},
       }
       if (!supported || !text.trim()) return noop
 
-      const voice = voiceFor(modelSlug, text)
+      const voice = voiceFor(modelSlug, text, gameLanguage)
       const ctrl = new AbortController()
       let cancelled = false
 
@@ -315,7 +315,8 @@ export function useSpeech(): SpeechController {
   )
 
   const speak = useCallback(
-    (text: string, modelSlug: ModelSlug): Promise<void> => prepare(text, modelSlug).play(),
+    (text: string, modelSlug: ModelSlug, gameLanguage?: VoiceLang): Promise<void> =>
+      prepare(text, modelSlug, gameLanguage).play(),
     [prepare],
   )
 

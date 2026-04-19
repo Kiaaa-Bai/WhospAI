@@ -1,10 +1,15 @@
 import { MsEdgeTTS } from 'msedge-tts'
 const tts = new MsEdgeTTS()
 const voices = await tts.getVoices()
-const check = (prefix) => {
-  const list = voices.filter(v => v.Locale?.startsWith(prefix)).map(v => v.ShortName).sort()
-  console.log(`\n${prefix} voices (${list.length}):\n` + list.join('\n'))
+const check = (prefixes, label) => {
+  const list = voices
+    .filter(v => prefixes.some(p => v.Locale?.startsWith(p)))
+    .map(v => `${v.ShortName}${v.Gender ? ` (${v.Gender[0]})` : ''}`)
+    .sort()
+  console.log(`\n${label} — ${list.length} voice(s):\n` + list.join('\n'))
 }
-check('zh-CN')
-check('ja-JP')
-check('en-US')
+check(['ko-KR'], 'Korean')
+check(['es-ES','es-MX','es-US'], 'Spanish (ES/MX/US)')
+check(['fr-FR','fr-CA'], 'French (FR/CA)')
+check(['de-DE'], 'German')
+check(['ru-RU'], 'Russian')
