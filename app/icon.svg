@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" shape-rendering="geometricPrecision">
+  <!-- Rounded ink background (Reigns palette) -->
+  <rect width="256" height="256" rx="48" fill="#2A2723"/>
+
+  <!-- Fedora crown -->
+  <path d="M 52 116 Q 52 38 128 38 Q 204 38 204 116 Z" fill="#D9A94A"/>
+  <!-- Fedora brim -->
+  <ellipse cx="128" cy="120" rx="104" ry="14" fill="#D9A94A"/>
+  <!-- Hat band (red accent) -->
+  <rect x="60" y="104" width="136" height="12" fill="#C8453D"/>
+
+  <!-- Domino eye mask -->
+  <path d="M 48 176
+           Q 48 156 68 156
+           L 108 156
+           Q 128 156 128 172
+           Q 128 156 148 156
+           L 188 156
+           Q 208 156 208 176
+           L 208 192
+           Q 208 210 188 210
+           L 148 210
+           Q 128 210 128 196
+           Q 128 210 108 210
+           L 68 210
+           Q 48 210 48 192 Z"
+        fill="#D9A94A"/>
+  <!-- Eye holes -->
+  <circle cx="92"  cy="184" r="8" fill="#2A2723"/>
+  <circle cx="164" cy="184" r="8" fill="#2A2723"/>
+</svg>
