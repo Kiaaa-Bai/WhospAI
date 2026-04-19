@@ -18,13 +18,20 @@ type ProviderVoices = {
 
 // Edge TTS "ShortName" values. Full catalog:
 // https://speech.microsoft.com/portal/voicegallery
+//
+// NOTE: Microsoft silently deprecates voices — a retired voice doesn't 4xx,
+// it returns HTTP 200 with zero audio bytes. Two previously-used voices
+// (zh-CN-XiaohanNeural, zh-CN-XiaomengNeural) were dropped in late 2024,
+// which manifested as xai/alibaba going mute in Chinese games. If a new
+// voice goes silent in future, check whether it was retired at
+// https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support
 const VOICES: Record<string, ProviderVoices> = {
   openai:    { en: 'en-US-AriaNeural',         zh: 'zh-CN-XiaoxiaoNeural', ja: 'ja-JP-NanamiNeural' },
   anthropic: { en: 'en-US-GuyNeural',          zh: 'zh-CN-YunyangNeural',  ja: 'ja-JP-KeitaNeural'  },
   google:    { en: 'en-US-JennyNeural',        zh: 'zh-CN-XiaoyiNeural',   ja: 'ja-JP-NanamiNeural' },
   deepseek:  { en: 'en-US-BrianNeural',        zh: 'zh-CN-YunxiNeural',    ja: 'ja-JP-KeitaNeural'  },
-  xai:       { en: 'en-US-ChristopherNeural',  zh: 'zh-CN-XiaohanNeural',  ja: 'ja-JP-KeitaNeural'  },
-  alibaba:   { en: 'en-US-EmmaNeural',         zh: 'zh-CN-XiaomengNeural', ja: 'ja-JP-NanamiNeural' },
+  xai:       { en: 'en-US-ChristopherNeural',  zh: 'zh-CN-YunzeNeural',    ja: 'ja-JP-KeitaNeural'  },
+  alibaba:   { en: 'en-US-EmmaNeural',         zh: 'zh-CN-XiaochenNeural', ja: 'ja-JP-NanamiNeural' },
 }
 
 const FALLBACK: ProviderVoices = {
