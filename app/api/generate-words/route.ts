@@ -60,7 +60,45 @@ const WordPairSchema = z.object({
   undercover: z.string().min(1).max(30),
 })
 
-function buildPrompt(language: z.infer<typeof RequestSchema>['language']): string {
+/**
+ * Categories the model can be asked to draw from. Injecting a random
+ * category per call is the single biggest lever for variety — without it,
+ * LLMs converge on the same handful of "obvious" pairs every time even at
+ * temperature 1.0.
+ */
+const CATEGORIES = [
+  'foods and drinks',
+  'fruits and vegetables',
+  'animals (land, sea, or flying)',
+  'musical instruments',
+  'sports and games',
+  'vehicles and transportation',
+  'tools and utensils',
+  'clothing and accessories',
+  'household appliances',
+  'furniture',
+  'buildings and public places',
+  'natural geography (mountains, rivers, biomes)',
+  'weather and natural phenomena',
+  'stationery and office supplies',
+  'electronics and gadgets',
+  'body parts',
+  'professions and occupations',
+  'toys and childhood objects',
+  'desserts and snacks',
+  'plants, flowers, and trees',
+  'cooking ingredients and spices',
+  'footwear',
+  'drinks and beverages',
+  'containers (boxes, bottles, bags)',
+  'celebrations and holiday items',
+] as const
+
+function buildPrompt(
+  language: z.infer<typeof RequestSchema>['language'],
+  category: string,
+  nonce: string,
+): string {
   const info = LANGUAGE_INFO[language]
 
   return `Generate a word pair for the social deduction game "Who is the Spy".
@@ -78,6 +116,11 @@ RULES:
 - Each word must be 1–8 characters.
 - Language: ${info.name}. ${info.rule}
 
+VARIETY REQUIREMENT:
+- Pick your pair from this category: ${category}.
+- Do NOT reuse any of the example pairs listed above; think of something fresh.
+- Variety seed: ${nonce} (use this to diversify — do not output it).
+
 Output JSON with exactly the two words. Pick something unexpected — avoid
 cliché pairs. Be creative but keep it recognizable.`
 }
@@ -93,10 +136,13 @@ export async function POST(req: Request) {
     })
   }
 
+  const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)]
+  const nonce = Math.random().toString(36).slice(2, 10)
+
   try {
     const { output } = await generateText({
       model: 'deepseek/deepseek-v3',
-      prompt: buildPrompt(parsed.language),
+      prompt: buildPrompt(parsed.language, category, nonce),
       temperature: 1.0,        // crank variety so repeated clicks give new pairs
       abortSignal: AbortSignal.timeout(15_000),
       output: Output.object({ schema: WordPairSchema }),

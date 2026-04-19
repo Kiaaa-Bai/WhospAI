@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GameState } from './useGameReducer'
 import type { ModelSlug, Player, PlayerId } from '@/lib/game/types'
+import { useLang } from '@/lib/i18n'
 
 export type OverlayKind = 'text' | 'elimination' | 'round-start'
 
@@ -31,6 +32,7 @@ const CROSSFADE_MS = 400
 const ITEM_TOTAL_MS = HOLD_MS + CROSSFADE_MS
 
 export function useOverlayTrigger(state: GameState): OverlayState | null {
+  const { t } = useLang()
   const [overlay, setOverlay] = useState<OverlayState | null>(null)
   const overlayRef = useRef<OverlayState | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -61,8 +63,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
       items.push({
         id: `start-${Date.now()}`,
         kind: 'text',
-        title: 'GAME START',
-        subtitle: '6 AIs · 1 undercover',
+        title: t('overlay.game_start'),
+        subtitle: t('overlay.game_start_sub'),
       })
     }
 
@@ -76,8 +78,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
       items.push({
         id: `round-${state.round}-describe`,
         kind: 'round-start',
-        title: `ROUND ${state.round}`,
-        subtitle: 'DESCRIBE PHASE',
+        title: t('overlay.round', { round: state.round }),
+        subtitle: t('overlay.describe_phase'),
         alive: buildOrderedAlive(order, state.players),
       })
     }
@@ -91,8 +93,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
         items.push({
           id: `round-${state.round}-vote`,
           kind: 'round-start',
-          title: `ROUND ${state.round}`,
-          subtitle: 'VOTE PHASE',
+          title: t('overlay.round', { round: state.round }),
+          subtitle: t('overlay.vote_phase'),
           alive: buildOrderedAlive(order, state.players),
         })
       } else if (state.phase === 'tiebreak') {
@@ -102,8 +104,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
         items.push({
           id: `round-${state.round}-tiebreak`,
           kind: 'round-start',
-          title: 'TIEBREAK',
-          subtitle: `ROUND ${state.round}`,
+          title: t('overlay.tiebreak'),
+          subtitle: t('overlay.round', { round: state.round }),
           alive: buildOrderedAlive(tiedOrder, state.players),
         })
       }
@@ -119,8 +121,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
           items.push({
             id: `elim-${state.round}-${latest.eliminatedId}`,
             kind: 'elimination',
-            title: `${p.displayName.toUpperCase()} OUT`,
-            subtitle: role.toUpperCase(),
+            title: t('overlay.name_out', { name: p.displayName.toUpperCase() }),
+            subtitle: t(`role.${role}`),
             accent: role,
             eliminated: { displayName: p.displayName, modelSlug: p.modelSlug, role },
           })
@@ -129,8 +131,8 @@ export function useOverlayTrigger(state: GameState): OverlayState | null {
         items.push({
           id: `noelim-${state.round}-${state.history.length}`,
           kind: 'text',
-          title: 'NO ELIMINATION',
-          subtitle: 'Vote was tied',
+          title: t('overlay.no_elimination'),
+          subtitle: t('overlay.vote_tied'),
         })
       }
     }

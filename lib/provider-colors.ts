@@ -24,16 +24,15 @@ export function providerRing(slug: ModelSlug): string {
   return PROVIDER_COLORS[providerOf(slug)]?.ring ?? '#AAA'
 }
 
-/**
- * Role-based fill color for card interiors. Matches the civilian / undercover
- * green / red used elsewhere in the app so all role-coloring is consistent.
- */
+/** Card interior fill per role — saturated green/red. */
 export function roleFill(role: Role): string {
   return role === 'undercover' ? 'var(--reigns-red)' : 'var(--reigns-green)'
 }
 
-/**
- * Cream text color used on top of role-filled cards — tested against both the
- * green and red fills for legibility.
- */
+/** Text color on top of a role-filled card — cream works on both red and green. */
+export function roleText(_role: Role): string {
+  return '#F5EDDB'
+}
+
+/** Cream text color used on role-filled cards. */
 export const CARD_TEXT = '#F5EDDB'

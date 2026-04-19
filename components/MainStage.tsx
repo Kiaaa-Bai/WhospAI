@@ -1,9 +1,10 @@
 'use client'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { Brain, Shield, Detective, HourglassMedium, ListNumbers } from '@phosphor-icons/react'
-import { Avatar } from './Avatar'
+import { ProviderAvatar } from './ProviderAvatar'
 import { ThoughtBubble } from './ThoughtBubble'
-import { providerBg, roleFill, CARD_TEXT } from '@/lib/provider-colors'
+import { roleFill, CARD_TEXT } from '@/lib/provider-colors'
+import { useLang } from '@/lib/i18n'
 import type { GameState } from '@/hooks/useGameReducer'
 import type { Player, PlayerId, ModelSlug } from '@/lib/game/types'
 
@@ -24,7 +25,7 @@ function BucketGroup({
       >
         {label}
       </div>
-      <div className="flex items-center gap-2">{children}</div>
+      <div className="flex items-end gap-3">{children}</div>
     </div>
   )
 }
@@ -32,10 +33,11 @@ function BucketGroup({
 type BucketVariant = 'now' | 'next' | 'done' | 'skipped' | 'out'
 
 /**
- * Mini-card version of a seat — used in the speaking-order strip instead of
- * a bare round avatar. Follows the same provider-outline + role-fill rule.
+ * Speaking-order entries are just provider-colored avatar discs — no outer
+ * card, no p-id text. NOW is a larger disc with a role-color glow to echo
+ * the focus card above.
  */
-function BucketCard({
+function BucketDisc({
   player,
   variant,
 }: {
@@ -44,45 +46,26 @@ function BucketCard({
 }) {
   const isNow = variant === 'now'
   const dim = variant === 'out' || variant === 'done' || variant === 'skipped'
-
-  const providerOutline = providerBg(player.modelSlug)
-  const cardFill = roleFill(player.role)
-  const roleGlow = cardFill
-
-  const size = isNow ? 76 : 56
-  const avatarSize = isNow ? 48 : 36
+  const size = isNow ? 56 : 40
+  const padding = isNow ? 7 : 5
 
   return (
     <motion.div
       layout
       transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-      className="relative rounded-lg flex flex-col items-center justify-center"
-      style={{
-        width: size,
-        height: size + 18,
-        background: cardFill,
-        border: `3px solid ${providerOutline}`,
-        boxShadow: isNow
-          ? `0 0 0 3px ${roleGlow}, 3px 3px 0 0 var(--reigns-ink)`
-          : '3px 3px 0 0 var(--reigns-ink)',
-        opacity: dim ? 0.55 : 1,
-      }}
+      className="relative"
     >
-      <Avatar
+      <ProviderAvatar
         modelSlug={player.modelSlug}
-        size={avatarSize}
-        className={dim ? 'grayscale' : ''}
+        size={size}
+        padding={padding}
+        outline={isNow ? 3 : 2}
+        dim={dim}
       />
-      <div
-        className="text-[9px] font-mono font-bold uppercase tracking-wider mt-0.5"
-        style={{ color: CARD_TEXT }}
-      >
-        {player.id}
-      </div>
       {variant === 'out' && (
         <span
-          className="absolute inset-0 flex items-center justify-center pointer-events-none font-black text-4xl"
-          style={{ color: 'var(--reigns-ink)' }}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none font-black text-3xl"
+          style={{ color: 'var(--reigns-red)' }}
         >
           ✕
         </span>
@@ -151,6 +134,7 @@ function speakingBuckets(state: GameState): SpeakingBuckets {
 }
 
 export function MainStage({ state }: Props) {
+  const { t } = useLang()
   const alive = state.players.filter(p => !p.eliminated)
   let focusId: PlayerId | null = state.currentSpeaker
   let isNextUp = false
@@ -167,7 +151,7 @@ export function MainStage({ state }: Props) {
   if (!focus) {
     return (
       <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--reigns-ink-soft)' }}>
-        Dealing the words…
+        {t('game.dealing_lower')}
       </div>
     )
   }
@@ -183,9 +167,11 @@ export function MainStage({ state }: Props) {
   const buckets = speakingBuckets(state)
 
   const focusCardFill = roleFill(focus.role)
-  const focusProviderOutline = providerBg(focus.modelSlug)
-  const focusRoleGlow = focusCardFill
   const isFocusActive = state.currentSpeaker === focus.id
+  const focusGlow = isFocusActive ? focusCardFill : undefined
+  const focusCardShadow = focusGlow
+    ? `0 0 0 3px ${focusGlow}, 0 0 14px ${focusGlow}, 4px 4px 0 0 var(--reigns-ink)`
+    : '4px 4px 0 0 var(--reigns-ink)'
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3">
@@ -201,7 +187,8 @@ export function MainStage({ state }: Props) {
         />
       </div>
 
-      {/* Circular avatar — no background card */}
+      {/* Big round avatar inside a provider-colored disc. Active speaker
+          gets a role-color ring + glow around the disc. */}
       <div className="shrink-0 flex items-center justify-center">
         <AnimatePresence mode="wait">
           <motion.div
@@ -209,30 +196,36 @@ export function MainStage({ state }: Props) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
           >
-            <Avatar modelSlug={focus.modelSlug} size={150} className="drop-shadow-lg" />
+            <ProviderAvatar
+              modelSlug={focus.modelSlug}
+              size={140}
+              padding={10}
+              outline={4}
+              activeGlow={focusGlow}
+            />
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Desk card — provider outline, role fill. Contains name + word,
-          inner thoughts, and speaking-order strip. */}
+      {/* Desk card — black ink outline, role-colored fill. Active card gets
+          a role-color glow. */}
       <div
         className="flex-1 min-h-0 w-full rounded-xl p-4 flex flex-col"
         style={{
           background: focusCardFill,
-          border: `4px solid ${focusProviderOutline}`,
-          boxShadow: isFocusActive
-            ? `0 0 0 4px ${focusRoleGlow}, 4px 4px 0 0 var(--reigns-ink)`
-            : '4px 4px 0 0 var(--reigns-ink)',
-          color: CARD_TEXT,
+          border: '4px solid var(--reigns-ink)',
+          boxShadow: focusCardShadow,
+          color: 'var(--reigns-ink)',
+          transition: 'box-shadow 0.25s ease',
         }}
       >
         {/* Name + word header */}
         <div className="shrink-0 text-center">
           <div
             className="flex items-center justify-center gap-2 font-mono font-bold tracking-[0.2em] uppercase text-xs"
-            style={{ color: CARD_TEXT, opacity: 0.85 }}
+            style={{ color: 'var(--reigns-ink)', opacity: 0.75 }}
           >
             {focus.role === 'undercover' ? (
               <Detective weight="fill" size={14} />
@@ -241,27 +234,39 @@ export function MainStage({ state }: Props) {
             )}
             {focus.displayName}
           </div>
+
+          {/* Keyword nested card — black ink fill with cream text + offset
+              shadow. Wraps naturally for long words, never truncates. */}
           <div
-            className="font-heading text-3xl font-black mt-1"
-            style={{ color: CARD_TEXT }}
+            className="inline-block max-w-full mt-2 rounded-lg px-5 py-2"
+            style={{
+              background: 'var(--reigns-ink)',
+              border: '3px solid var(--reigns-ink)',
+              boxShadow: '3px 3px 0 0 var(--reigns-ink)',
+            }}
           >
-            {focus.word}
+            <div
+              className="font-heading text-4xl font-black leading-tight break-words"
+              style={{ color: CARD_TEXT }}
+            >
+              {focus.word}
+            </div>
           </div>
         </div>
 
         {/* Inner Thoughts */}
-        <div className="shrink-0 flex flex-col mt-3">
+        <div className="shrink-0 flex flex-col mt-4">
           <div
             className="flex items-center gap-1.5 mb-1.5"
-            style={{ color: CARD_TEXT, opacity: 0.75 }}
+            style={{ color: 'var(--reigns-ink)', opacity: 0.75 }}
           >
             <Brain weight="fill" size={12} />
             <span className="text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
-              Inner Thoughts
+              {t('game.inner_thoughts')}
             </span>
           </div>
           <div
-            className="h-[150px] overflow-y-auto rounded-lg p-4 text-left text-base leading-relaxed whitespace-pre-wrap break-words"
+            className="h-[100px] overflow-y-auto rounded-lg p-3 text-left text-sm leading-relaxed whitespace-pre-wrap break-words"
             style={{
               background: '#FAF2DF',
               border: '2px solid var(--reigns-ink)',
@@ -273,20 +278,20 @@ export function MainStage({ state }: Props) {
                 className="italic flex items-center gap-1.5"
                 style={{ color: 'var(--reigns-ink-faint)' }}
               >
-                <Brain weight="fill" size={16} /> thinking…
+                <Brain weight="fill" size={16} /> {t('game.thinking')}
               </span>
             )}
           </div>
         </div>
 
-        {/* Speaking order — mini cards */}
+        {/* Speaking order — provider-disc avatars, no outer card */}
         <div
           className="flex-1 min-h-0 mt-4 pt-3 flex flex-col"
-          style={{ borderTop: `2px solid ${CARD_TEXT}`, borderTopStyle: 'dashed', borderColor: 'rgba(245,237,219,0.35)' }}
+          style={{ borderTop: '2px dashed rgba(42,39,35,0.3)' }}
         >
           <div
             className="flex items-center gap-1.5 mb-2 shrink-0"
-            style={{ color: CARD_TEXT, opacity: 0.75 }}
+            style={{ color: 'var(--reigns-ink)', opacity: 0.75 }}
           >
             <ListNumbers weight="fill" size={12} />
             <span className="text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
@@ -295,43 +300,46 @@ export function MainStage({ state }: Props) {
           </div>
           <div className="flex-1 min-h-0 flex items-center justify-center px-2 pb-2">
             <LayoutGroup id="speaking-order">
-              <div className="flex items-center justify-center gap-5 flex-wrap">
+              <div className="flex items-end justify-center gap-5 flex-wrap">
                 {buckets.now && (
                   <BucketGroup label="NOW" labelStyle={{ color: 'var(--reigns-gold)' }}>
-                    <BucketCard player={buckets.now} variant="now" />
+                    <BucketDisc player={buckets.now} variant="now" />
                   </BucketGroup>
                 )}
                 {buckets.upNext.length > 0 && (
-                  <BucketGroup label="UP NEXT" labelStyle={{ color: CARD_TEXT }}>
+                  <BucketGroup
+                    label="UP NEXT"
+                    labelStyle={{ color: 'var(--reigns-ink)' }}
+                  >
                     {buckets.upNext.map(p => (
-                      <BucketCard key={p.id} player={p} variant="next" />
+                      <BucketDisc key={p.id} player={p} variant="next" />
                     ))}
                   </BucketGroup>
                 )}
                 {buckets.done.length > 0 && (
                   <BucketGroup
                     label="DONE"
-                    labelStyle={{ color: CARD_TEXT, opacity: 0.6 }}
+                    labelStyle={{ color: 'var(--reigns-ink)', opacity: 0.55 }}
                   >
                     {buckets.done.map(p => (
-                      <BucketCard key={p.id} player={p} variant="done" />
+                      <BucketDisc key={p.id} player={p} variant="done" />
                     ))}
                   </BucketGroup>
                 )}
                 {buckets.skipped.length > 0 && (
                   <BucketGroup label="SKIPPED" labelStyle={{ color: 'var(--reigns-gold)' }}>
                     {buckets.skipped.map(p => (
-                      <BucketCard key={p.id} player={p} variant="skipped" />
+                      <BucketDisc key={p.id} player={p} variant="skipped" />
                     ))}
                   </BucketGroup>
                 )}
                 {buckets.out.length > 0 && (
                   <BucketGroup
                     label="OUT"
-                    labelStyle={{ color: CARD_TEXT, opacity: 0.6 }}
+                    labelStyle={{ color: 'var(--reigns-ink)', opacity: 0.55 }}
                   >
                     {buckets.out.map(p => (
-                      <BucketCard key={p.id} player={p} variant="out" />
+                      <BucketDisc key={p.id} player={p} variant="out" />
                     ))}
                   </BucketGroup>
                 )}

@@ -1,6 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
-import { Avatar } from './Avatar'
+import { ProviderAvatar } from './ProviderAvatar'
 import type { ModelSlug } from '@/lib/game/types'
 
 interface Props {
@@ -115,7 +115,12 @@ export function ThoughtBubble({
       }}
     >
       {isAvatar ? (
-        <Avatar modelSlug={targetModelSlug!} size={avatarSize} />
+        <ProviderAvatar
+          modelSlug={targetModelSlug!}
+          size={avatarSize}
+          padding={size === 'xl' ? 8 : size === 'lg' ? 5 : 3}
+          outline={size === 'sm' ? 2 : 3}
+        />
       ) : showEllipsis ? (
         <Ellipsis size={size} />
       ) : (

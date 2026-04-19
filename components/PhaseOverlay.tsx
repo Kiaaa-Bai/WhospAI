@@ -1,7 +1,6 @@
 'use client'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Avatar } from './Avatar'
-import { providerBg } from '@/lib/provider-colors'
+import { ProviderAvatar } from './ProviderAvatar'
 import type { OverlayItem, OverlayState } from '@/hooks/useOverlayTrigger'
 
 interface Props {
@@ -41,7 +40,7 @@ export function PhaseOverlay({ state }: Props) {
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           />
 
-          <div className="absolute inset-0 flex items-center justify-center px-8">
+          <div className="absolute inset-0 flex items-center justify-center px-4 md:px-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={item.id}
@@ -74,16 +73,16 @@ function OverlayContent({ item }: { item: OverlayItem }) {
   }
 
   return (
-    <div className="text-center">
+    <div className="text-center px-4">
       <div
-        className="font-heading text-6xl md:text-7xl font-black tracking-[0.14em]"
+        className="font-heading text-4xl md:text-7xl font-black tracking-[0.1em] md:tracking-[0.14em] break-words"
         style={{ color: '#F5EDDB' }}
       >
         {item.title}
       </div>
       {item.subtitle && (
         <div
-          className="mt-4 font-mono text-lg font-bold tracking-wider"
+          className="mt-3 md:mt-4 font-mono text-sm md:text-lg font-bold tracking-wider"
           style={{
             color:
               item.accent === 'undercover'
@@ -102,22 +101,31 @@ function OverlayContent({ item }: { item: OverlayItem }) {
 
 function RoundStartContent({ item }: { item: OverlayItem }) {
   return (
-    <div className="flex flex-col items-center text-center gap-6">
-      <div className="flex items-end justify-center gap-5">
+    <div className="flex flex-col items-center text-center gap-4 md:gap-6 w-full">
+      {/* Avatar row — wraps on narrow screens so all 6 stay visible. */}
+      <div className="flex flex-wrap items-end justify-center gap-x-3 gap-y-4 md:gap-5 max-w-full">
         {item.alive!.map(p => (
-          <div key={p.id} className="flex flex-col items-center gap-2">
-            <div
-              className="rounded-lg p-2 flex items-center justify-center"
-              style={{
-                background: providerBg(p.modelSlug),
-                border: '3px solid var(--reigns-ink)',
-                boxShadow: '4px 4px 0 0 var(--reigns-ink)',
-              }}
-            >
-              <Avatar modelSlug={p.modelSlug} size={72} />
+          <div key={p.id} className="flex flex-col items-center gap-1.5 md:gap-2">
+            {/* Desktop size */}
+            <div className="hidden md:block">
+              <ProviderAvatar
+                modelSlug={p.modelSlug}
+                size={72}
+                padding={8}
+                outline={3}
+              />
+            </div>
+            {/* Mobile size */}
+            <div className="md:hidden">
+              <ProviderAvatar
+                modelSlug={p.modelSlug}
+                size={44}
+                padding={5}
+                outline={2}
+              />
             </div>
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center font-mono text-sm font-bold"
+              className="w-5 h-5 md:w-7 md:h-7 rounded-full flex items-center justify-center font-mono text-[11px] md:text-sm font-bold"
               style={{
                 background: 'var(--reigns-gold)',
                 color: 'var(--reigns-ink)',
@@ -130,14 +138,14 @@ function RoundStartContent({ item }: { item: OverlayItem }) {
         ))}
       </div>
       <div
-        className="font-heading text-5xl md:text-6xl font-black tracking-[0.12em]"
+        className="font-heading text-3xl md:text-6xl font-black tracking-[0.08em] md:tracking-[0.12em] break-words"
         style={{ color: '#F5EDDB' }}
       >
         {item.title}
       </div>
       {item.subtitle && (
         <div
-          className="font-mono text-lg font-bold tracking-[0.25em] uppercase"
+          className="font-mono text-xs md:text-lg font-bold tracking-[0.18em] md:tracking-[0.25em] uppercase"
           style={{ color: 'var(--reigns-gold)' }}
         >
           {item.subtitle}
@@ -181,14 +189,25 @@ function EliminationContent({ item }: { item: OverlayItem }) {
             x: { duration: 0.4, delay: 0.25, ease: 'easeInOut' },
             filter: { duration: 0.4, delay: 0.45 },
           }}
-          className="p-4 rounded-xl flex items-center justify-center"
-          style={{
-            background: providerBg(elim.modelSlug),
-            border: '3px solid var(--reigns-ink)',
-            boxShadow: '6px 6px 0 0 var(--reigns-ink)',
-          }}
         >
-          <Avatar modelSlug={elim.modelSlug} size={180} />
+          {/* Desktop */}
+          <div className="hidden md:block">
+            <ProviderAvatar
+              modelSlug={elim.modelSlug}
+              size={180}
+              padding={14}
+              outline={4}
+            />
+          </div>
+          {/* Mobile */}
+          <div className="md:hidden">
+            <ProviderAvatar
+              modelSlug={elim.modelSlug}
+              size={110}
+              padding={10}
+              outline={3}
+            />
+          </div>
         </motion.div>
 
         {/* Static red X — fades in */}
@@ -198,14 +217,14 @@ function EliminationContent({ item }: { item: OverlayItem }) {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: 0.55, ease: 'easeOut' }}
         >
-          <span className="text-red-500 font-black text-[10rem] leading-none drop-shadow-[0_0_18px_rgba(239,68,68,0.5)]">
+          <span className="text-red-500 font-black text-[6rem] md:text-[10rem] leading-none drop-shadow-[0_0_18px_rgba(239,68,68,0.5)]">
             ✕
           </span>
         </motion.div>
       </div>
 
       <motion.div
-        className="font-heading text-5xl md:text-6xl font-black tracking-[0.1em]"
+        className="font-heading text-2xl md:text-6xl font-black tracking-[0.08em] md:tracking-[0.1em] break-words max-w-full px-4"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.7 }}
@@ -214,7 +233,7 @@ function EliminationContent({ item }: { item: OverlayItem }) {
         {elim.displayName.toUpperCase()}
       </motion.div>
       <motion.div
-        className="font-mono text-2xl font-bold tracking-[0.2em]"
+        className="font-mono text-sm md:text-2xl font-bold tracking-[0.15em] md:tracking-[0.2em] px-4 text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.85 }}

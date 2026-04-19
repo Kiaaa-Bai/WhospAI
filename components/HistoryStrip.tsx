@@ -1,6 +1,7 @@
 'use client'
 import { FilmSlate, HandPointing, HourglassMedium, Scales, Skull } from '@phosphor-icons/react'
-import { Avatar } from './Avatar'
+import { ProviderAvatar } from './ProviderAvatar'
+import { useLang } from '@/lib/i18n'
 import type { GameState } from '@/hooks/useGameReducer'
 import type { Player, Statement, Vote } from '@/lib/game/types'
 
@@ -18,6 +19,7 @@ interface RowKey {
  * player who spoke twice (initial + tiebreak revision) shows BOTH cells.
  */
 export function HistoryStrip({ state }: { state: GameState }) {
+  const { t } = useLang()
   const allEntries: Array<Statement | Vote> = [...state.statements, ...state.votes]
   const rowSet = new Map<string, RowKey>()
   for (const entry of allEntries) {
@@ -39,7 +41,7 @@ export function HistoryStrip({ state }: { state: GameState }) {
           color: 'var(--reigns-ink-faint)',
         }}
       >
-        no rounds yet
+        {t('game.no_rounds')}
       </div>
     )
   }
@@ -120,7 +122,13 @@ function Cell({
       voteCell = (
         <>
           <HandPointing weight="fill" size={12} />
-          <Avatar modelSlug={target.modelSlug} size={18} />
+          <ProviderAvatar
+            modelSlug={target.modelSlug}
+            size={16}
+            padding={2}
+            outline={1}
+            shadow={false}
+          />
         </>
       )
     } else if (vote && vote.targetId === null) {

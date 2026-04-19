@@ -2,6 +2,7 @@
 import { Users, ClockCounterClockwise } from '@phosphor-icons/react'
 import { SeatCard } from './SeatCard'
 import { HistoryStrip } from './HistoryStrip'
+import { useLang } from '@/lib/i18n'
 import type { GameState } from '@/hooks/useGameReducer'
 
 function SectionLabel({
@@ -23,15 +24,23 @@ function SectionLabel({
 }
 
 export function PanelSeats({ state }: { state: GameState }) {
+  const { t } = useLang()
   const seatOrder = state.players.map(p => p.id)
+
+  // Tally how many votes each player has received in the current round —
+  // used to show a red ×N badge during vote / tiebreak phases.
+  const voteCounts: Record<string, number> = {}
+  for (const target of Object.values(state.currentRoundVotes)) {
+    if (target) voteCounts[target] = (voteCounts[target] ?? 0) + 1
+  }
 
   return (
     <div>
       <SectionLabel
         icon={<Users weight="fill" size={14} />}
-        text="Contestants"
+        text={t('game.contestants')}
       />
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3 items-stretch">
         {seatOrder.map(id => {
           const p = state.players.find(pp => pp.id === id)
           if (!p) return null
@@ -46,15 +55,16 @@ export function PanelSeats({ state }: { state: GameState }) {
               isActive={isActive}
               voteTarget={target?.modelSlug ?? null}
               phase={state.phase}
+              votesReceived={voteCounts[p.id] ?? 0}
             />
           )
         })}
       </div>
 
-      <div className="mt-5">
+      <div className="mt-4 md:mt-5 hidden md:block">
         <SectionLabel
           icon={<ClockCounterClockwise weight="fill" size={14} />}
-          text="Round History"
+          text={t('game.round_history')}
         />
         <div className="grid grid-cols-6 gap-3">
           <HistoryStrip state={state} />

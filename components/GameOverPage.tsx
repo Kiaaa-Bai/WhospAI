@@ -4,7 +4,9 @@ import {
   Trophy, Detective, Shield, Skull, ArrowClockwise, PencilSimple, FilmSlate, Scales,
 } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
-import { providerBg } from '@/lib/provider-colors'
+import { ProviderAvatar } from './ProviderAvatar'
+import { roleFill, CARD_TEXT } from '@/lib/provider-colors'
+import { useLang } from '@/lib/i18n'
 import type { GameResult, GameConfig } from '@/lib/game/types'
 import type { GameState } from '@/hooks/useGameReducer'
 
@@ -20,6 +22,7 @@ interface Props {
  * elimination timeline condenses to a single horizontal row of chips.
  */
 export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
+  const { t } = useLang()
   const civiliansWon = result.winner === 'civilians'
   const winnerColor = civiliansWon ? 'var(--reigns-green)' : 'var(--reigns-red)'
 
@@ -41,30 +44,30 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.35 }}
-        className="shrink-0 px-8 py-6 text-center"
+        className="shrink-0 px-6 md:px-8 py-4 md:py-6 text-center"
         style={{ borderBottom: '3px solid var(--reigns-ink)' }}
       >
         <div
-          className="flex items-center justify-center gap-3 mb-2 font-mono font-bold text-xs tracking-[0.4em] uppercase"
+          className="flex items-center justify-center gap-3 mb-2 font-mono font-bold text-[10px] md:text-xs tracking-[0.3em] md:tracking-[0.4em] uppercase"
           style={{ color: 'var(--reigns-ink-faint)' }}
         >
-          <Trophy weight="fill" size={20} style={{ color: 'var(--reigns-gold)' }} />
-          Game Over
-          <Trophy weight="fill" size={20} style={{ color: 'var(--reigns-gold)' }} />
+          <Trophy weight="fill" size={18} style={{ color: 'var(--reigns-gold)' }} />
+          {t('end.game_over')}
+          <Trophy weight="fill" size={18} style={{ color: 'var(--reigns-gold)' }} />
         </div>
         <div
-          className="font-heading font-black tracking-[0.1em] text-5xl md:text-6xl"
+          className="font-heading font-black tracking-[0.1em] text-3xl md:text-6xl"
           style={{ color: winnerColor }}
         >
-          {civiliansWon ? 'CIVILIANS WIN' : 'UNDERCOVER WINS'}
+          {civiliansWon ? t('end.civilians_win') : t('end.undercover_wins')}
         </div>
         <div
-          className="mt-3 flex items-center justify-center gap-5 font-mono text-sm"
+          className="mt-2 md:mt-3 flex flex-wrap items-center justify-center gap-3 md:gap-5 font-mono text-xs md:text-sm"
           style={{ color: 'var(--reigns-ink-soft)' }}
         >
           <span className="flex items-center gap-1.5">
             <FilmSlate weight="fill" size={14} />
-            {result.rounds} {result.rounds === 1 ? 'round' : 'rounds'}
+            {t(result.rounds === 1 ? 'end.round' : 'end.rounds', { n: result.rounds })}
           </span>
           <span className="flex items-center gap-1.5">
             <Shield weight="fill" size={14} style={{ color: 'var(--reigns-green)' }} />
@@ -77,17 +80,21 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
         </div>
       </motion.div>
 
-      {/* Roster — fills available vertical space */}
-      <div className="flex-1 min-h-0 px-8 py-5 flex flex-col">
-        <SectionHeader icon={<Detective weight="fill" size={14} />} text="Final Roster" />
-        <div className="mt-4 flex-1 grid grid-cols-6 gap-4 min-h-0">
+      {/* Roster — fills available vertical space. Extra horizontal padding
+          + internal grid padding so 4px offset shadows + winner chip
+          offsets aren't clipped at the container edges. */}
+      <div className="flex-1 min-h-0 px-4 md:px-10 py-3 md:py-5 flex flex-col overflow-hidden">
+        <SectionHeader
+          icon={<Detective weight="fill" size={14} />}
+          text={t('end.final_roster')}
+        />
+        <div className="mt-3 md:mt-4 flex-1 grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 min-h-0 px-1 py-1">
           {allPlayers.map((p, i) => {
             const isWinner =
               (civiliansWon && p.role === 'civilian') ||
               (!civiliansWon && p.role === 'undercover')
             const RoleIcon = p.role === 'undercover' ? Detective : Shield
-            const roleColor =
-              p.role === 'undercover' ? 'var(--reigns-red)' : 'var(--reigns-green)'
+            const cardFill = roleFill(p.role)
 
             return (
               <motion.div
@@ -97,33 +104,35 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
                 transition={{ delay: 0.15 + i * 0.05, duration: 0.3 }}
                 className="relative flex flex-col items-center justify-between gap-2 p-3 rounded-lg"
                 style={{
-                  background: providerBg(p.modelSlug),
+                  background: cardFill,
                   border: '3px solid var(--reigns-ink)',
-                  boxShadow: isWinner
-                    ? '0 0 0 3px var(--reigns-gold), 4px 4px 0 0 var(--reigns-ink)'
-                    : '4px 4px 0 0 var(--reigns-ink)',
+                  boxShadow: '4px 4px 0 0 var(--reigns-ink)',
                   opacity: p.eliminated ? 0.7 : 1,
+                  color: 'var(--reigns-ink)',
                 }}
               >
                 {isWinner && (
                   <span
-                    className="absolute -top-3 -right-3 ink-chip"
+                    className="absolute top-1 right-1 ink-chip"
                     style={{
                       background: 'var(--reigns-gold)',
                       color: 'var(--reigns-ink)',
                       border: '2px solid var(--reigns-ink)',
-                      padding: '4px 6px',
+                      padding: '3px 6px',
+                      fontSize: 10,
                     }}
                   >
-                    <Trophy weight="fill" size={12} />
-                    WIN
+                    <Trophy weight="fill" size={11} />
+                    {t('end.win')}
                   </span>
                 )}
                 <div className="relative">
-                  <Avatar
+                  <ProviderAvatar
                     modelSlug={p.modelSlug}
-                    size={72}
-                    className={p.eliminated ? 'grayscale opacity-80' : ''}
+                    size={64}
+                    padding={7}
+                    outline={3}
+                    dim={p.eliminated}
                   />
                   {p.eliminated && (
                     <span
@@ -134,25 +143,39 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
                     </span>
                   )}
                 </div>
-                <div className="ink-chip justify-center w-full" style={{ padding: '4px 8px' }}>
-                  <span className="truncate">{p.displayName}</span>
-                </div>
                 <div
-                  className="ink-chip justify-center gap-1.5"
-                  style={{
-                    padding: '3px 8px',
-                    background: roleColor,
-                    color: 'var(--reigns-ink)',
-                  }}
+                  className="flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider w-full text-center leading-tight break-words"
+                  style={{ color: 'var(--reigns-ink)', opacity: 0.8 }}
                 >
                   <RoleIcon weight="fill" size={11} />
-                  {p.role.toUpperCase()}
+                  <span className="break-words">{p.displayName}</span>
                 </div>
+
+                {/* Keyword nested card — black ink fill with cream text,
+                    wraps naturally so long words are never truncated. */}
+                <div
+                  className="w-full rounded-md px-2 py-1.5"
+                  style={{
+                    background: 'var(--reigns-ink)',
+                    border: '2px solid var(--reigns-ink)',
+                    boxShadow: '2px 2px 0 0 var(--reigns-ink)',
+                  }}
+                >
+                  <div
+                    className="font-heading text-base font-black w-full text-center leading-tight break-words"
+                    style={{ color: CARD_TEXT }}
+                  >
+                    {p.word}
+                  </div>
+                </div>
+
                 <div
                   className="text-[10px] font-mono font-bold uppercase tracking-wider"
-                  style={{ color: 'var(--reigns-ink)' }}
+                  style={{ color: 'var(--reigns-ink)', opacity: 0.7 }}
                 >
-                  {p.eliminated ? `Out · R${p.eliminatedRound}` : 'Survived'}
+                  {p.eliminated
+                    ? t('end.out_round', { n: p.eliminatedRound ?? 0 })
+                    : t('end.survived')}
                 </div>
               </motion.div>
             )
@@ -160,19 +183,20 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
         </div>
       </div>
 
-      {/* Condensed timeline — single horizontal row of chips */}
+      {/* Condensed timeline — single horizontal row of chips (hidden on
+          mobile to keep the game-over page to a single no-scroll view). */}
       <div
-        className="shrink-0 px-8 py-4"
+        className="shrink-0 px-8 py-4 hidden md:block"
         style={{ borderTop: '2px solid var(--reigns-border)' }}
       >
-        <SectionHeader icon={<FilmSlate weight="fill" size={14} />} text="Timeline" />
+        <SectionHeader icon={<FilmSlate weight="fill" size={14} />} text={t('end.timeline')} />
         <div className="mt-2 flex items-center gap-2 overflow-x-auto">
           {state.history.length === 0 ? (
             <div
               className="text-xs font-mono italic"
               style={{ color: 'var(--reigns-ink-faint)' }}
             >
-              No eliminations this game
+              {t('end.no_elims')}
             </div>
           ) : (
             state.history.map((h, i) => {
@@ -187,7 +211,7 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
                     style={{ padding: '4px 8px' }}
                   >
                     <Scales weight="fill" size={11} />
-                    R{h.round} TIED
+                    {t('end.round_tied', { n: h.round })}
                   </motion.div>
                 )
               }
@@ -227,16 +251,19 @@ export function GameOverPage({ result, state, config, onPlayAgain }: Props) {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="shrink-0 px-8 py-5 flex items-center justify-center gap-4 flex-wrap"
+        className="shrink-0 px-4 md:px-8 py-3 md:py-5 flex items-center justify-center gap-3 md:gap-4 flex-wrap"
         style={{ borderTop: '3px solid var(--reigns-ink)' }}
       >
-        <button className="pixel-btn pixel-btn-primary" onClick={onPlayAgain}>
+        <button
+          className="pixel-btn pixel-btn-primary text-xs md:text-sm"
+          onClick={onPlayAgain}
+        >
           <ArrowClockwise weight="fill" size={18} />
-          PLAY AGAIN
+          {t('end.play_again')}
         </button>
-        <button className="pixel-btn" onClick={onPlayAgain}>
+        <button className="pixel-btn text-xs md:text-sm" onClick={onPlayAgain}>
           <PencilSimple weight="fill" size={18} />
-          CHANGE WORDS
+          {t('end.change_words')}
         </button>
       </motion.div>
     </motion.div>

@@ -4,7 +4,60 @@ import { voiceFor } from '@/lib/voices'
 import type { ModelSlug } from '@/lib/game/types'
 
 const STORAGE_KEY = 'whospy:tts-enabled'
-const RETRY_DELAYS = [0, 300, 800]
+
+/**
+ * Retry schedule for TTS fetches. Extended vs. the original [0, 300, 800]
+ * so a throttling window that lasts 2–3s can still be ridden out instead
+ * of silently dropping the audio for one speaker.
+ */
+const RETRY_DELAYS = [0, 400, 1200, 2500]
+
+/**
+ * Maximum concurrent TTS fetches across the entire app. Edge TTS
+ * (`msedge-tts` → Microsoft's WebSocket endpoint) is unreliable at 4+
+ * parallel connections from a single client — some of them get silently
+ * dropped, which surfaces as "this model had no voice this turn". Capping
+ * at 2 lets us preload the next turn's audio without hammering the
+ * service. One module-level limiter is shared by every `useSpeech` call.
+ */
+const MAX_CONCURRENT_TTS = 2
+
+class TtsConcurrencyLimiter {
+  private active = 0
+  private readonly queue: Array<() => void> = []
+
+  constructor(private readonly max: number) {}
+
+  async acquire(signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    if (this.active < this.max) {
+      this.active++
+      return
+    }
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        const idx = this.queue.indexOf(grant)
+        if (idx >= 0) this.queue.splice(idx, 1)
+        reject(new DOMException('Aborted', 'AbortError'))
+      }
+      const grant = () => {
+        if (signal) signal.removeEventListener('abort', onAbort)
+        this.active++
+        resolve()
+      }
+      if (signal) signal.addEventListener('abort', onAbort, { once: true })
+      this.queue.push(grant)
+    })
+  }
+
+  release(): void {
+    this.active--
+    const next = this.queue.shift()
+    if (next) next()
+  }
+}
+
+const ttsLimiter = new TtsConcurrencyLimiter(MAX_CONCURRENT_TTS)
 
 export interface PreparedSpeech {
   play: () => Promise<void>
@@ -146,23 +199,36 @@ export function useSpeech(): SpeechController {
 
       const voice = voiceFor(modelSlug, text)
       const ctrl = new AbortController()
-      const blobPromise = fetchBlobWithRetry(text, voice, ctrl.signal)
       let cancelled = false
-      // Decode the audio in parallel with the fetch so play() has a buffer
-      // ready immediately when the time comes.
-      const bufferPromise: Promise<AudioBuffer | null> = blobPromise.then(async blob => {
-        if (cancelled || !blob) return null
-        const ctx = getContext()
-        if (!ctx) return null
+
+      // Gate fetch+decode behind the shared concurrency limiter so at most
+      // MAX_CONCURRENT_TTS requests are in flight to Edge TTS at once. If
+      // we exceed that, the upload waits here instead of blasting the
+      // service and getting throttled into silent failure.
+      const bufferPromise: Promise<AudioBuffer | null> = (async () => {
         try {
-          const arrayBuffer = await blob.arrayBuffer()
-          // decodeAudioData detaches the array buffer; pass a copy to be safe
-          // across browsers that complain.
-          return await ctx.decodeAudioData(arrayBuffer.slice(0))
+          await ttsLimiter.acquire(ctrl.signal)
         } catch {
           return null
         }
-      })
+        try {
+          if (cancelled) return null
+          const blob = await fetchBlobWithRetry(text, voice, ctrl.signal)
+          if (cancelled || !blob) return null
+          const ctx = getContext()
+          if (!ctx) return null
+          try {
+            const arrayBuffer = await blob.arrayBuffer()
+            // decodeAudioData detaches the array buffer; pass a copy to be
+            // safe across browsers that complain.
+            return await ctx.decodeAudioData(arrayBuffer.slice(0))
+          } catch {
+            return null
+          }
+        } finally {
+          ttsLimiter.release()
+        }
+      })()
 
       return {
         cancel: () => {

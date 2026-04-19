@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Space_Mono, Noto_Sans_SC } from "next/font/google";
+import { Geist, Space_Mono, Noto_Sans_SC, Noto_Sans_JP, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "@/lib/i18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,8 +20,20 @@ const notoSC = Noto_Sans_SC({
   subsets: ["latin"],
 });
 
+const notoJP = Noto_Sans_JP({
+  variable: "--font-noto-jp",
+  weight: ["400", "700", "900"],
+  subsets: ["latin"],
+});
+
+const notoKR = Noto_Sans_KR({
+  variable: "--font-noto-kr",
+  weight: ["400", "700", "900"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Whospy",
+  title: "WhospAI",
   description: "Watch 6 AI models play \"Who is the Spy\" against each other.",
 };
 
@@ -32,9 +45,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${spaceMono.variable} ${notoSC.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${spaceMono.variable} ${notoSC.variable} ${notoJP.variable} ${notoKR.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

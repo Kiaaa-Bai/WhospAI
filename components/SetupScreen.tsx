@@ -5,28 +5,28 @@ import {
   Shield, Detective, Sparkle, Shuffle, Play, MagicWand, CaretRight,
 } from '@phosphor-icons/react'
 import { Avatar } from './Avatar'
+import { LangSwitcher } from './LangSwitcher'
 import { ROSTER } from '@/lib/game/roster'
 import { WORD_PAIRS } from '@/data/word-pairs'
 import { providerBg } from '@/lib/provider-colors'
+import { useLang, type Lang } from '@/lib/i18n'
 import type { GameConfig } from '@/lib/game/types'
 
-type Lang = 'en' | 'zh' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'ru'
-
-const LANGUAGES: Array<{ code: Lang; label: string; placeholderCivilian: string; placeholderUndercover: string }> = [
-  { code: 'en', label: 'EN', placeholderCivilian: 'apple',  placeholderUndercover: 'pear' },
-  { code: 'zh', label: '中',  placeholderCivilian: '苹果',   placeholderUndercover: '梨' },
-  { code: 'ja', label: '日',  placeholderCivilian: 'りんご', placeholderUndercover: '梨' },
-  { code: 'ko', label: '한',  placeholderCivilian: '사과',   placeholderUndercover: '배' },
-  { code: 'es', label: 'ES', placeholderCivilian: 'manzana', placeholderUndercover: 'pera' },
-  { code: 'fr', label: 'FR', placeholderCivilian: 'pomme',  placeholderUndercover: 'poire' },
-  { code: 'de', label: 'DE', placeholderCivilian: 'Apfel',  placeholderUndercover: 'Birne' },
-  { code: 'ru', label: 'RU', placeholderCivilian: 'яблоко', placeholderUndercover: 'груша' },
-]
+const PLACEHOLDERS: Record<Lang, { civilian: string; undercover: string }> = {
+  en: { civilian: 'apple',   undercover: 'pear' },
+  zh: { civilian: '苹果',     undercover: '梨' },
+  ja: { civilian: 'りんご',   undercover: '梨' },
+  ko: { civilian: '사과',     undercover: '배' },
+  es: { civilian: 'manzana', undercover: 'pera' },
+  fr: { civilian: 'pomme',   undercover: 'poire' },
+  de: { civilian: 'Apfel',   undercover: 'Birne' },
+  ru: { civilian: 'яблоко',  undercover: 'груша' },
+}
 
 export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void }) {
+  const { lang, t } = useLang()
   const [civilianWord, setCivilianWord] = useState('')
   const [undercoverWord, setUndercoverWord] = useState('')
-  const [lang, setLang] = useState<Lang>('en')
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
 
@@ -60,56 +60,97 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
     }
   }
 
+  const ph = PLACEHOLDERS[lang]
+
+  // Split the rules template into pre / different / mid / undercover / post so
+  // we can render the {different} and {undercover} pieces as colored <span>s
+  // regardless of word order across languages.
+  const rulesTemplate = t('setup.rules', {
+    different: '\u0000DIFF\u0000',
+    undercover: '\u0000UNDER\u0000',
+  })
+  const rulesNodes = rulesTemplate.split(/(\u0000DIFF\u0000|\u0000UNDER\u0000)/).map((piece, i) => {
+    if (piece === '\u0000DIFF\u0000') {
+      return (
+        <span key={i} className="font-bold" style={{ color: 'var(--reigns-red)' }}>
+          {t('setup.rules.different')}
+        </span>
+      )
+    }
+    if (piece === '\u0000UNDER\u0000') {
+      return (
+        <span key={i} className="font-bold" style={{ color: 'var(--reigns-red)' }}>
+          {t('setup.rules.undercover')}
+        </span>
+      )
+    }
+    return <span key={i}>{piece}</span>
+  })
+
   return (
     <div
-      className="min-h-screen flex flex-col overflow-x-hidden"
+      className="min-h-screen md:h-screen flex flex-col overflow-x-hidden"
       style={{ background: 'var(--reigns-bg)', color: 'var(--reigns-ink)' }}
     >
-      {/* Dark accent banner */}
+      {/* Dark accent banner — lang switcher lives here top-right. */}
       <header
-        className="shrink-0 px-8 py-5 flex items-center gap-3"
+        className="shrink-0 px-4 md:px-8 py-3 md:py-5 flex items-center gap-3"
         style={{
           background: 'var(--reigns-accent-strip)',
           color: '#F5EDDB',
           borderBottom: '3px solid var(--reigns-ink)',
         }}
       >
-        <Detective weight="fill" size={28} style={{ color: 'var(--reigns-gold)' }} />
-        <div>
-          <div className="font-heading font-black tracking-[0.3em] text-xl">WHOSPY</div>
-          <div className="text-xs font-mono opacity-80">
-            Watch 6 AI models play Who is the Spy
+        <Detective
+          weight="fill"
+          size={24}
+          className="md:hidden"
+          style={{ color: 'var(--reigns-gold)' }}
+        />
+        <Detective
+          weight="fill"
+          size={28}
+          className="hidden md:block"
+          style={{ color: 'var(--reigns-gold)' }}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="font-heading font-black tracking-[0.3em] text-lg md:text-xl">
+            {t('app.title')}
+          </div>
+          <div className="text-[10px] md:text-xs font-mono opacity-80 truncate">
+            {t('app.tagline')}
           </div>
         </div>
+        <LangSwitcher variant="dark" />
       </header>
 
-      {/* Two-column body */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(420px,45%)_1fr] min-h-0">
+      {/* Two-column body (desktop) / single stack (mobile) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(420px,45%)_1fr] min-h-0 overflow-y-auto md:overflow-hidden">
         {/* LEFT — word setup */}
         <div
-          className="border-b lg:border-b-0 lg:border-r px-8 py-8 flex flex-col gap-7"
+          className="border-b lg:border-b-0 lg:border-r px-5 md:px-8 py-5 md:py-8 flex flex-col gap-5 md:gap-7"
           style={{ borderColor: 'var(--reigns-border)' }}
         >
-          <SectionHeader icon={<MagicWand weight="fill" size={14} />} text="Secret Words" />
+          <SectionHeader icon={<MagicWand weight="fill" size={14} />} text={t('setup.secret_words')} />
 
           {/* Inputs */}
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1.5 md:mb-2">
                 <Shield weight="fill" size={14} style={{ color: 'var(--reigns-green)' }} />
                 <label
                   className="text-xs font-mono font-bold uppercase tracking-[0.18em]"
                   style={{ color: 'var(--reigns-ink-soft)' }}
                 >
-                  Civilian word
+                  {t('setup.civilian_word')}
                 </label>
               </div>
               <input
                 value={civilianWord}
                 onChange={e => setCivilianWord(e.target.value)}
-                placeholder={LANGUAGES.find(l => l.code === lang)!.placeholderCivilian}
+                placeholder={ph.civilian}
                 maxLength={30}
-                className="w-full px-4 py-3 rounded-lg text-lg font-sans outline-none focus:ring-2 focus:ring-offset-2"
+                className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg text-base md:text-lg font-sans outline-none focus:ring-2 focus:ring-offset-2"
                 style={{
                   background: '#FAF2DF',
                   border: '2px solid var(--reigns-ink)',
@@ -120,21 +161,21 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
             </div>
 
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1.5 md:mb-2">
                 <Detective weight="fill" size={14} style={{ color: 'var(--reigns-red)' }} />
                 <label
                   className="text-xs font-mono font-bold uppercase tracking-[0.18em]"
                   style={{ color: 'var(--reigns-ink-soft)' }}
                 >
-                  Undercover word
+                  {t('setup.undercover_word')}
                 </label>
               </div>
               <input
                 value={undercoverWord}
                 onChange={e => setUndercoverWord(e.target.value)}
-                placeholder={LANGUAGES.find(l => l.code === lang)!.placeholderUndercover}
+                placeholder={ph.undercover}
                 maxLength={30}
-                className="w-full px-4 py-3 rounded-lg text-lg font-sans outline-none focus:ring-2 focus:ring-offset-2"
+                className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg text-base md:text-lg font-sans outline-none focus:ring-2 focus:ring-offset-2"
                 style={{
                   background: '#FAF2DF',
                   border: '2px solid var(--reigns-ink)',
@@ -146,27 +187,15 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
           </div>
 
           {/* AI Generate */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <SectionHeader
-                icon={<Sparkle weight="fill" size={14} />}
-                text="Let AI Pick"
-                compact
-              />
-              <div
-                className="flex items-center gap-0.5 rounded p-0.5 flex-wrap shrink-0"
-                style={{
-                  background: 'var(--reigns-bg-soft)',
-                  border: '2px solid var(--reigns-border)',
-                }}
-              >
-                <LangToggle value={lang} onChange={setLang} />
-              </div>
-            </div>
+          <div className="space-y-2 md:space-y-3">
+            <SectionHeader
+              icon={<Sparkle weight="fill" size={14} />}
+              text={t('setup.let_ai_pick')}
+            />
             <button
               onClick={generate}
               disabled={generating}
-              className="pixel-btn pixel-btn-primary w-full py-3 text-sm"
+              className="pixel-btn pixel-btn-primary w-full py-2.5 md:py-3 text-xs md:text-sm"
             >
               {generating ? (
                 <>
@@ -176,12 +205,12 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
                   >
                     <Shuffle weight="fill" size={16} />
                   </motion.span>
-                  GENERATING…
+                  {t('setup.generating')}
                 </>
               ) : (
                 <>
                   <Sparkle weight="fill" size={16} />
-                  GENERATE WITH AI
+                  {t('setup.generate_with_ai')}
                 </>
               )}
             </button>
@@ -199,21 +228,21 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
             )}
           </div>
 
-          {/* Presets */}
+          {/* Presets — filtered by the global `lang` from the header. */}
           <div>
             <SectionHeader
               icon={<Shuffle weight="fill" size={14} />}
-              text="Or Pick a Preset"
+              text={t('setup.or_preset')}
             />
-            <div className="mt-3 flex flex-wrap gap-2">
-              {WORD_PAIRS.map(p => (
+            <div className="mt-2 md:mt-3 flex flex-wrap gap-1.5 md:gap-2">
+              {WORD_PAIRS.filter(p => p.language === lang).map(p => (
                 <button
                   key={`${p.civilian}-${p.undercover}`}
                   onClick={() => {
                     setCivilianWord(p.civilian)
                     setUndercoverWord(p.undercover)
                   }}
-                  className="text-xs px-2.5 py-1.5 rounded transition-colors font-mono font-bold"
+                  className="text-[11px] md:text-xs px-2 md:px-2.5 py-1 md:py-1.5 rounded transition-colors font-mono font-bold"
                   style={{
                     background: 'var(--reigns-bg-soft)',
                     border: '2px solid var(--reigns-border-soft)',
@@ -227,9 +256,9 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
           </div>
 
           {/* Start */}
-          <div className="mt-auto pt-4">
+          <div className="mt-auto pt-3 md:pt-4">
             <button
-              className="pixel-btn pixel-btn-danger w-full py-4 text-base"
+              className="pixel-btn pixel-btn-danger w-full py-3 md:py-4 text-sm md:text-base"
               disabled={!valid}
               onClick={() =>
                 onStart({
@@ -239,26 +268,26 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
               }
             >
               <Play weight="fill" size={18} />
-              START THE GAME
+              {t('setup.start')}
               <CaretRight weight="fill" size={16} />
             </button>
             <div
               className="text-[10px] text-center mt-2 font-mono"
               style={{ color: 'var(--reigns-ink-faint)' }}
             >
-              6 AIs · 1 undercover · you watch and judge
+              {t('setup.caption')}
             </div>
           </div>
         </div>
 
-        {/* RIGHT — roster showcase */}
+        {/* RIGHT — roster showcase (hidden on mobile to keep a no-scroll feel) */}
         <div
-          className="px-8 py-8 flex flex-col gap-5"
+          className="hidden lg:flex px-8 py-8 flex-col gap-5"
           style={{ background: 'var(--reigns-bg-strong)' }}
         >
           <SectionHeader
             icon={<Detective weight="fill" size={14} />}
-            text="Tonight's Contestants"
+            text={t('setup.contestants')}
           />
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 content-start">
@@ -293,16 +322,7 @@ export function SetupScreen({ onStart }: { onStart: (config: GameConfig) => void
               borderTop: '2px solid var(--reigns-border-soft)',
             }}
           >
-            Each AI gets a secret word. One gets a{' '}
-            <span className="font-bold" style={{ color: 'var(--reigns-red)' }}>
-              different
-            </span>{' '}
-            word — the{' '}
-            <span className="font-bold" style={{ color: 'var(--reigns-red)' }}>
-              undercover
-            </span>
-            . They describe their word in short phrases without saying it, then vote to eliminate
-            the one that sounds off. Civilians win if they catch the spy before the final two.
+            {rulesNodes}
           </div>
         </div>
       </div>
@@ -330,26 +350,5 @@ function SectionHeader({
       </span>
       <div className="flex-1 h-0.5 ml-1" style={{ background: 'var(--reigns-border-soft)' }} />
     </div>
-  )
-}
-
-function LangToggle({ value, onChange }: { value: Lang; onChange: (v: Lang) => void }) {
-  return (
-    <>
-      {LANGUAGES.map(l => (
-        <button
-          key={l.code}
-          onClick={() => onChange(l.code)}
-          className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors"
-          style={
-            value === l.code
-              ? { background: 'var(--reigns-ink)', color: '#F5EDDB' }
-              : { background: 'transparent', color: 'var(--reigns-ink-faint)' }
-          }
-        >
-          {l.label}
-        </button>
-      ))}
-    </>
   )
 }
