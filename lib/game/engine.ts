@@ -5,6 +5,7 @@ import { assignRoles } from './assign-roles'
 import { shuffle } from './shuffle'
 import { resolveVotes, checkWinCondition } from './scoring'
 import { runDescribe, runVote, runTiebreak } from './phases'
+import { resolveLanguageLabel } from './prompts'
 
 export const MAX_ROUNDS = 6
 // Server-side delay between LLM calls. Defaults to 0 so the engine races
@@ -35,15 +36,20 @@ export async function runGame(
   const rng = opts.rng ?? Math.random
   const interCallDelayMs = opts.interCallDelayMs ?? DEFAULT_INTER_CALL_DELAY_MS
   const players = assignRoles(config, rng)
+  // One language for every player, so the spy's prompt can't differ from
+  // the civilians' and the chosen game language (es/fr/de/ja) is respected.
+  const languageLabel = resolveLanguageLabel(
+    [config.civilianWord, config.undercoverWord],
+    config.language,
+  )
   emit({ type: 'game-start', players })
 
   const allStatements: Statement[] = []
   let round = 0
-  while (round < MAX_ROUNDS) {
+  // Check the win condition BEFORE bumping the counter so `round` ends up as
+  // the number of rounds actually played (it is reported in GameResult).
+  while (round < MAX_ROUNDS && !checkWinCondition(players)) {
     round++
-
-    const win = checkWinCondition(players)
-    if (win) break
 
     emit({ type: 'round-start', round })
 
@@ -54,7 +60,7 @@ export async function runGame(
     emit({ type: 'phase', phase: 'describe' })
     for (let i = 0; i < orderedAlive.length; i++) {
       if (i > 0) await delay(interCallDelayMs)
-      const stmt = await runDescribe(orderedAlive[i], { players, statements: allStatements, round }, emit, llm)
+      const stmt = await runDescribe(orderedAlive[i], { players, statements: allStatements, round, languageLabel }, emit, llm)
       if (stmt) allStatements.push(stmt)
     }
 
@@ -62,7 +68,7 @@ export async function runGame(
     const votes: Vote[] = []
     for (let i = 0; i < alive.length; i++) {
       if (i > 0) await delay(interCallDelayMs)
-      const vote = await runVote(alive[i], { players, statements: allStatements, round }, emit, llm)
+      const vote = await runVote(alive[i], { players, statements: allStatements, round, languageLabel }, emit, llm)
       if (vote) votes.push(vote)
     }
 
@@ -74,7 +80,7 @@ export async function runGame(
       emit({ type: 'elimination', playerId: eliminated.id, tally: resolution.tally })
     } else {
       emit({ type: 'tie', tiedPlayers: resolution.tiedIds })
-      const tiebreak = await runTiebreak(resolution.tiedIds, players, round, emit, llm)
+      const tiebreak = await runTiebreak(resolution.tiedIds, players, round, emit, llm, languageLabel)
       if (tiebreak.kind === 'elimination') {
         const eliminated = players.find(p => p.id === tiebreak.targetId)!
         eliminated.eliminated = true

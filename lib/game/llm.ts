@@ -25,7 +25,6 @@ export interface LLM {
   vote(req: VoteRequest): Promise<VoteOutput>
 }
 
-// Real implementation appended to lib/game/llm.ts
 export function createRealLLM(): LLM {
   return {
     async describe(req): Promise<DescribeOutput> {

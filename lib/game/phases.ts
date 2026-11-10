@@ -28,7 +28,7 @@ export async function runDescribe(
 ): Promise<Statement | null> {
   emit({ type: 'speak-start', playerId: player.id })
 
-  const system = buildSystemPrompt(player)
+  const system = buildSystemPrompt(player, ctx.languageLabel)
   const prompt = buildDescribePrompt(player, ctx)
 
   const attempt = async (): Promise<Statement> => {
@@ -81,7 +81,7 @@ export async function runVote(
 ): Promise<Vote | null> {
   emit({ type: 'vote-start', playerId: voter.id })
 
-  const system = buildSystemPrompt(voter)
+  const system = buildSystemPrompt(voter, ctx.languageLabel)
   const prompt = buildVotePrompt(voter, ctx)
   const aliveIds = new Set(
     ctx.players.filter(p => !p.eliminated && p.id !== voter.id).map(p => p.id),
@@ -143,6 +143,7 @@ export async function runTiebreak(
   round: number,
   emit: Emit,
   llm: LLM,
+  languageLabel?: string,
 ): Promise<VoteResolution | { kind: 'no-elimination' }> {
   emit({ type: 'phase', phase: 'tiebreak' })
 
@@ -150,7 +151,7 @@ export async function runTiebreak(
   const tiedPlayers = alivePlayers.filter(p => tiedIds.includes(p.id))
 
   // collect prior round statements for context
-  const ctx: RoundContext = { players, statements: [], round }
+  const ctx: RoundContext = { players, statements: [], round, languageLabel }
 
   // tied players give one more statement
   for (const p of tiedPlayers) {

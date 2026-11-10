@@ -1,7 +1,7 @@
 // tests/hooks/useGameReducer.test.ts
 import { describe, it, expect } from 'vitest'
 import { reduceGameEvent, initialGameState } from '@/hooks/useGameReducer'
-import type { GameEvent, Player } from '@/lib/game/types'
+import type { Player } from '@/lib/game/types'
 
 const mkPlayer = (id: string, role: Player['role'] = 'civilian'): Player => ({
   id: id as Player['id'],

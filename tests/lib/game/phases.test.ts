@@ -121,7 +121,7 @@ describe('runTiebreak', () => {
         req.onToken('x')
         return { reasoning: 'r', summary: 's', statement: 'x' }
       }),
-      vote: vi.fn(async (req) => {
+      vote: vi.fn(async () => {
         // all vote for p2
         return { reasoning: 'r', summary: 's', targetPlayerId: 'p2' }
       }),

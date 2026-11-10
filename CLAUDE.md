@@ -14,7 +14,7 @@ Watch 6 AI models play the social-deduction game **Who is the Spy**. The user se
 - **Vercel AI Gateway** via AI SDK v6 (`streamText`, `generateText` + `Output.object`). Auth is OIDC — no API keys in `.env.local`; `vercel env pull` populates `VERCEL_OIDC_TOKEN`
 - **SSE** from `/api/play` streams game events to the client
 - Client-side **`useReducer` + playback queue** replays events at a human-readable pace (the server races ahead, the client buffers + animates)
-- **TTS**: Microsoft Edge TTS via `msedge-tts`, transcoded to Opus/WebM, played through Web Audio API (`decodeAudioData` + `AudioBufferSourceNode`) — never `<audio>` (streaming buffer underruns cause word-swallowing)
+- **TTS**: Microsoft Edge TTS via `msedge-tts`, served as MP3 (iOS WebKit cannot decode Opus/WebM), played through Web Audio API (`decodeAudioData` + `AudioBufferSourceNode`) — never `<audio>` (streaming buffer underruns cause word-swallowing)
 - **Rate limit**: Per-IP counters in **Upstash Redis** (Vercel Marketplace), exposed via `KV_REST_API_*` env vars
 - **Framer Motion** for layout transitions / overlays; Phosphor Icons (filled weight)
 - **Space Mono + Noto Sans SC/JP/KR** for CJK glyph fallback
@@ -26,7 +26,7 @@ app/
   api/
     play/             SSE stream of game events (rate-limited)
     generate-words/   LLM word-pair generator (rate-limited, random category + nonce)
-    tts/              Edge TTS → Opus/WebM proxy (concurrency-limited on client)
+    tts/              Edge TTS → MP3 proxy (concurrency-limited on client)
     quota/            Non-mutating GET — SetupScreen pre-checks remaining budget
   page.tsx            SetupScreen ↔ GameViewer switch
   layout.tsx          Fonts + <LanguageProvider>
@@ -47,7 +47,7 @@ components/
   LangSwitcher.tsx    Globe + dropdown, only rendered in SetupScreen (locked during game)
 hooks/
   useGameReducer.ts       Dispatches GameEvents → GameState
-  useGameSSE.ts           EventSource wrapper for /api/play
+  useGameSSE.ts           fetch + ReadableStream SSE reader for /api/play
   usePlaybackDispatch.ts  Queues server events, preloads TTS, animates typewriter
   useSpeech.ts            Web Audio-based TTS player with concurrency limiter
   useOverlayTrigger.ts    Watches state transitions, emits overlay items
@@ -56,13 +56,13 @@ lib/
   voices.ts           Edge TTS voice mapping + vote-announcement translation
   rate-limit.ts       Per-IP Upstash counters (fail-open when Upstash env absent)
   avatars.ts          Provider avatar + initial + color helpers
-  provider-colors.ts  Reigns-palette provider bg/ring + role fill/ring/text helpers
+  provider-colors.ts  Reigns-palette provider bg + role fill helpers, CARD_TEXT
   i18n.tsx            LanguageProvider + useLang() + 8-language dictionary
 data/
   word-pairs.ts       12 preset pairs × 8 languages
 scripts/
   list-voices.mjs     `pnpm exec tsx scripts/list-voices.mjs` — audit live Edge TTS
-                      voice catalog (zh/ja/en/es/fr/de/ko/ru). RUN THIS before
+                      voice catalog (currently prints ko/es/fr/de/ru only). RUN THIS before
                       adding a new voice to lib/voices.ts.
 ```
 

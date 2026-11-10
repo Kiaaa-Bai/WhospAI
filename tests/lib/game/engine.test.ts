@@ -63,4 +63,60 @@ describe('runGame', () => {
     const roundOrders = events.filter(e => e.type === 'round-order')
     expect(roundOrders.length).toBeGreaterThanOrEqual(1)
   })
+
+  it('reports the number of rounds actually played', async () => {
+    // rng 0.5 → undercover is p4 (Math.floor(0.5 * 6) === 3). Everyone votes
+    // p4 out in round 1, so the game must report exactly 1 round.
+    const ids = ['p1','p2','p3','p4','p5','p6']
+    const script = {
+      describes: Object.fromEntries(
+        ids.map(id => [mockKey(id as any, 1), { reasoning: 'r', summary: 's', statement: 'x' }]),
+      ),
+      votes: Object.fromEntries(
+        ids.map(id => [
+          mockKey(id as any, 1),
+          { reasoning: 'r', summary: 's', targetPlayerId: id === 'p4' ? 'p1' : 'p4' },
+        ]),
+      ),
+    }
+    const events: GameEvent[] = []
+    const result = await runGame(
+      { civilianWord: 'a', undercoverWord: 'b' }, e => events.push(e), createMockLLM(script),
+      { rng: () => 0.5 },
+    )
+
+    expect(result.winner).toBe('civilians')
+    expect(result.rounds).toBe(1)
+    expect(events.filter(e => e.type === 'round-start')).toHaveLength(1)
+  })
+
+  it('gives every player the same prompt language, from the setup language', async () => {
+    const ids = ['p1','p2','p3','p4','p5','p6']
+    const script = {
+      describes: Object.fromEntries(ids.flatMap(id =>
+        [1,2,3,4,5,6].map(r => [mockKey(id as any, r), { reasoning: 'r', summary: 's', statement: 'x' }]))),
+      votes: Object.fromEntries(ids.flatMap(id =>
+        [1,2,3,4,5,6].map(r => [mockKey(id as any, r),
+          { reasoning: 'r', summary: 's', targetPlayerId: id === 'p1' ? 'p2' : 'p1' }]))),
+    }
+    const base = createMockLLM(script)
+    const systems: string[] = []
+    const llm = {
+      ...base,
+      describe: (args: Parameters<typeof base.describe>[0]) => { systems.push(args.system); return base.describe(args) },
+      vote: (args: Parameters<typeof base.vote>[0]) => { systems.push(args.system); return base.vote(args) },
+    }
+
+    await runGame(
+      { civilianWord: 'りんご', undercoverWord: '梨', language: 'ja' },
+      () => {},
+      llm,
+      { rng: () => 0.5, interCallDelayMs: 0 },
+    )
+
+    expect(systems.length).toBeGreaterThan(0)
+    for (const s of systems) {
+      expect(s).toContain('The language of that word is: Japanese.')
+    }
+  })
 })

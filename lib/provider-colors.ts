@@ -7,31 +7,22 @@
 import { providerOf } from './avatars'
 import type { ModelSlug, Role } from './game/types'
 
-const PROVIDER_COLORS: Record<string, { bg: string; ring: string }> = {
-  openai:    { bg: 'var(--reigns-openai)',    ring: '#6DAB89' },
-  anthropic: { bg: 'var(--reigns-anthropic)', ring: '#E99A5F' },
-  google:    { bg: 'var(--reigns-google)',    ring: '#6C99CA' },
-  deepseek:  { bg: 'var(--reigns-deepseek)',  ring: '#9778BF' },
-  xai:       { bg: 'var(--reigns-xai)',       ring: '#5C5854' },
-  alibaba:   { bg: 'var(--reigns-alibaba)',   ring: '#EDBA65' },
+const PROVIDER_BG: Record<string, string> = {
+  openai:    'var(--reigns-openai)',
+  anthropic: 'var(--reigns-anthropic)',
+  google:    'var(--reigns-google)',
+  deepseek:  'var(--reigns-deepseek)',
+  xai:       'var(--reigns-xai)',
+  alibaba:   'var(--reigns-alibaba)',
 }
 
 export function providerBg(slug: ModelSlug): string {
-  return PROVIDER_COLORS[providerOf(slug)]?.bg ?? '#888'
-}
-
-export function providerRing(slug: ModelSlug): string {
-  return PROVIDER_COLORS[providerOf(slug)]?.ring ?? '#AAA'
+  return PROVIDER_BG[providerOf(slug)] ?? '#888'
 }
 
 /** Card interior fill per role — saturated green/red. */
 export function roleFill(role: Role): string {
   return role === 'undercover' ? 'var(--reigns-red)' : 'var(--reigns-green)'
-}
-
-/** Text color on top of a role-filled card — cream works on both red and green. */
-export function roleText(_role: Role): string {
-  return '#F5EDDB'
 }
 
 /** Cream text color used on role-filled cards. */

@@ -11,6 +11,9 @@ const WordSchema = z.string().trim().min(1).max(30)
 const ConfigSchema = z.object({
   civilianWord: WordSchema,
   undercoverWord: WordSchema,
+  // Setup-screen language; picks the prompt language when the words' script
+  // is ambiguous (Latin alphabet, kanji-only). Optional for old clients.
+  language: z.enum(['en', 'zh', 'ja', 'ko', 'es', 'fr', 'de', 'ru']).optional(),
 }).refine(d => d.civilianWord !== d.undercoverWord, {
   message: 'Words must differ',
 })

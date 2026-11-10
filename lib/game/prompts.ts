@@ -1,10 +1,22 @@
 // lib/game/prompts.ts
-import type { Player, Statement } from './types'
+import type { GameLanguage, Player, Statement } from './types'
 
 export interface RoundContext {
   players: Player[]
   statements: Statement[]
   round: number
+  /**
+   * Language every player must write in, resolved once per game by
+   * `resolveLanguageLabel`. Falls back to per-word detection when absent.
+   */
+  languageLabel?: string
+}
+
+const LATIN_LANGUAGE_LABELS: Partial<Record<GameLanguage, string>> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
 }
 
 /**
@@ -21,8 +33,30 @@ function detectLanguageLabel(word: string): string {
   return 'English'
 }
 
-export function buildSystemPrompt(player: Player): string {
-  const lang = detectLanguageLabel(player.word)
+/**
+ * One language for the whole game, from BOTH words plus the language picked
+ * at setup. Using both words keeps the spy and the civilians on the same
+ * language (a kana word vs a kanji-only word used to split Japanese/Chinese
+ * and out the spy). The script decides when it is unambiguous; the setup
+ * language breaks the two ambiguous cases: Han characters (Chinese vs
+ * Japanese) and the Latin alphabet (English vs Spanish / French / German).
+ */
+export function resolveLanguageLabel(
+  words: string[],
+  gameLanguage?: GameLanguage,
+): string {
+  const labels = words.map(detectLanguageLabel)
+  for (const unambiguous of ['Japanese', 'Korean', 'Russian', 'Arabic']) {
+    if (labels.includes(unambiguous)) return unambiguous
+  }
+  if (labels.includes('Chinese')) {
+    return gameLanguage === 'ja' ? 'Japanese' : 'Chinese'
+  }
+  return (gameLanguage && LATIN_LANGUAGE_LABELS[gameLanguage]) ?? 'English'
+}
+
+export function buildSystemPrompt(player: Player, languageLabel?: string): string {
+  const lang = languageLabel ?? detectLanguageLabel(player.word)
   return `You are Player ${player.id} in a social deduction game called "Who is the Spy".
 
 GAME SETUP
@@ -170,7 +204,7 @@ function renderTranscript(ctx: RoundContext): string {
 
 export function buildDescribePrompt(player: Player, ctx: RoundContext): string {
   const alive = ctx.players.filter(p => !p.eliminated).map(p => p.id).join(', ')
-  const lang = detectLanguageLabel(player.word)
+  const lang = ctx.languageLabel ?? detectLanguageLabel(player.word)
 
   return `ROUND ${ctx.round} — DESCRIBE PHASE.
 
@@ -194,7 +228,7 @@ Respond as JSON (all fields in ${lang}):
 
 export function buildVotePrompt(player: Player, ctx: RoundContext): string {
   const alive = ctx.players.filter(p => !p.eliminated && p.id !== player.id).map(p => p.id)
-  const lang = detectLanguageLabel(player.word)
+  const lang = ctx.languageLabel ?? detectLanguageLabel(player.word)
 
   return `ROUND ${ctx.round} — VOTE PHASE.
 

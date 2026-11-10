@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSystemPrompt, buildDescribePrompt, buildVotePrompt } from '@/lib/game/prompts'
+import { buildSystemPrompt, buildDescribePrompt, buildVotePrompt, resolveLanguageLabel } from '@/lib/game/prompts'
 import type { Player, Statement } from '@/lib/game/types'
 
 const mkPlayer = (id: string, opts: Partial<Player> = {}): Player => ({
@@ -68,5 +68,47 @@ describe('buildVotePrompt', () => {
     const prompt = buildVotePrompt(players[0], { players, statements: [], round: 1 })
     expect(prompt.toLowerCase()).toContain('vote')
     expect(prompt).toContain('cannot vote for yourself')
+  })
+})
+
+describe('resolveLanguageLabel', () => {
+  it('uses the setup language for Latin-alphabet words', () => {
+    expect(resolveLanguageLabel(['manzana', 'pera'], 'es')).toBe('Spanish')
+    expect(resolveLanguageLabel(['pomme', 'poire'], 'fr')).toBe('French')
+    expect(resolveLanguageLabel(['Apfel', 'Birne'], 'de')).toBe('German')
+  })
+
+  it('falls back to English for Latin words with no or a non-Latin setup language', () => {
+    expect(resolveLanguageLabel(['apple', 'pear'])).toBe('English')
+    expect(resolveLanguageLabel(['apple', 'pear'], 'zh')).toBe('English')
+  })
+
+  it('puts a kana word and a kanji-only word in the same language', () => {
+    expect(resolveLanguageLabel(['りんご', '梨'], 'ja')).toBe('Japanese')
+    // Even without the setup language, kana in either word means Japanese.
+    expect(resolveLanguageLabel(['りんご', '梨'])).toBe('Japanese')
+  })
+
+  it('reads kanji-only pairs as Japanese only when the game is Japanese', () => {
+    expect(resolveLanguageLabel(['苹果', '梨'], 'zh')).toBe('Chinese')
+    expect(resolveLanguageLabel(['林檎', '梨'], 'ja')).toBe('Japanese')
+  })
+
+  it('trusts unambiguous scripts over the setup language', () => {
+    expect(resolveLanguageLabel(['사과', '배'], 'en')).toBe('Korean')
+    expect(resolveLanguageLabel(['яблоко', 'груша'], 'en')).toBe('Russian')
+  })
+})
+
+describe('language label threading', () => {
+  it('system, describe and vote prompts use the given label instead of the word', () => {
+    const p = mkPlayer('p1', { word: 'manzana' })
+    const ctx = { players: [p, mkPlayer('p2')], statements: [], round: 1, languageLabel: 'Spanish' }
+    expect(buildSystemPrompt(p, 'Spanish')).toContain('MUST be written entirely in Spanish')
+    expect(buildDescribePrompt(p, ctx)).toContain('(Spanish)')
+    expect(buildVotePrompt(p, ctx)).toContain('(Spanish)')
+    expect(buildSystemPrompt(p, 'Spanish')).toContain('The language of that word is: Spanish.')
+    // Without a label the old per-word detection still applies (Latin → English).
+    expect(buildSystemPrompt(p)).toContain('The language of that word is: English.')
   })
 })
